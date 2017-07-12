@@ -85,6 +85,7 @@ const _ = grpc.SupportPackageIsVersion4
 type GreeterClient interface {
 	// Sends a greeting
 	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
+	SayHelloStream(ctx context.Context, opts ...grpc.CallOption) (Greeter_SayHelloStreamClient, error)
 }
 
 type greeterClient struct {
@@ -104,11 +105,43 @@ func (c *greeterClient) SayHello(ctx context.Context, in *HelloRequest, opts ...
 	return out, nil
 }
 
+func (c *greeterClient) SayHelloStream(ctx context.Context, opts ...grpc.CallOption) (Greeter_SayHelloStreamClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Greeter_serviceDesc.Streams[0], c.cc, "/hello.Greeter/SayHelloStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &greeterSayHelloStreamClient{stream}
+	return x, nil
+}
+
+type Greeter_SayHelloStreamClient interface {
+	Send(*HelloRequest) error
+	Recv() (*HelloReply, error)
+	grpc.ClientStream
+}
+
+type greeterSayHelloStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *greeterSayHelloStreamClient) Send(m *HelloRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *greeterSayHelloStreamClient) Recv() (*HelloReply, error) {
+	m := new(HelloReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Server API for Greeter service
 
 type GreeterServer interface {
 	// Sends a greeting
 	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
+	SayHelloStream(Greeter_SayHelloStreamServer) error
 }
 
 func RegisterGreeterServer(s *grpc.Server, srv GreeterServer) {
@@ -133,6 +166,32 @@ func _Greeter_SayHello_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Greeter_SayHelloStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GreeterServer).SayHelloStream(&greeterSayHelloStreamServer{stream})
+}
+
+type Greeter_SayHelloStreamServer interface {
+	Send(*HelloReply) error
+	Recv() (*HelloRequest, error)
+	grpc.ServerStream
+}
+
+type greeterSayHelloStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *greeterSayHelloStreamServer) Send(m *HelloReply) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *greeterSayHelloStreamServer) Recv() (*HelloRequest, error) {
+	m := new(HelloRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 var _Greeter_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "hello.Greeter",
 	HandlerType: (*GreeterServer)(nil),
@@ -142,21 +201,29 @@ var _Greeter_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Greeter_SayHello_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SayHelloStream",
+			Handler:       _Greeter_SayHelloStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "hello.proto",
 }
 
 func init() { proto.RegisterFile("hello.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 136 bytes of a gzipped FileDescriptorProto
+	// 154 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xce, 0x48, 0xcd, 0xc9,
 	0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x73, 0x94, 0x94, 0xb8, 0x78, 0x3c,
 	0x40, 0x8c, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12, 0x21, 0x21, 0x2e, 0x96, 0xbc, 0xc4, 0xdc,
 	0x54, 0x09, 0x46, 0x05, 0x46, 0x0d, 0xce, 0x20, 0x30, 0x5b, 0x49, 0x8d, 0x8b, 0x0b, 0xaa, 0xa6,
 	0x20, 0xa7, 0x52, 0x48, 0x82, 0x8b, 0x3d, 0x37, 0xb5, 0xb8, 0x38, 0x31, 0x1d, 0xa6, 0x08, 0xc6,
-	0x35, 0xb2, 0xe7, 0x62, 0x77, 0x2f, 0x4a, 0x4d, 0x2d, 0x49, 0x2d, 0x12, 0x32, 0xe1, 0xe2, 0x08,
+	0x35, 0xaa, 0xe7, 0x62, 0x77, 0x2f, 0x4a, 0x4d, 0x2d, 0x49, 0x2d, 0x12, 0x32, 0xe1, 0xe2, 0x08,
 	0x4e, 0xac, 0x04, 0xeb, 0x12, 0x12, 0xd6, 0x83, 0xd8, 0x8b, 0x6c, 0x8f, 0x94, 0x20, 0xaa, 0x60,
-	0x41, 0x4e, 0xa5, 0x12, 0x43, 0x12, 0x1b, 0xd8, 0x69, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff,
-	0xf4, 0xbe, 0xdb, 0x94, 0xa9, 0x00, 0x00, 0x00,
+	0x41, 0x4e, 0xa5, 0x12, 0x83, 0x90, 0x1d, 0x17, 0x1f, 0x4c, 0x57, 0x70, 0x49, 0x51, 0x6a, 0x62,
+	0x2e, 0xf1, 0x7a, 0x35, 0x18, 0x0d, 0x18, 0x93, 0xd8, 0xc0, 0x5e, 0x33, 0x06, 0x04, 0x00, 0x00,
+	0xff, 0xff, 0x39, 0x50, 0x19, 0xf7, 0xe9, 0x00, 0x00, 0x00,
 }

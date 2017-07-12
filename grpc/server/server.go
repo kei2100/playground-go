@@ -8,9 +8,13 @@ import (
 
 	"os"
 
+	"fmt"
+
+	"io"
+
 	"golang.org/x/net/context"
-	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 // server is used to implement hello.GreeterServer.
@@ -21,13 +25,31 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 	return &pb.HelloReply{Message: "Hello " + in.Name}, nil
 }
 
+func (s *server) SayHelloStream(stream pb.Greeter_SayHelloStreamServer) error {
+	for {
+		in, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		for _, str := range []string{"Good morning", "Good afternoon", "Good evening"} {
+			if err := stream.Send(&pb.HelloReply{Message: fmt.Sprintf("%s %s", str, in.Name)}); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 func main() {
 	port := os.Getenv("GRPC_PORT")
 	if len(port) == 0 {
 		port = "50051"
 	}
 
-	lis, err := net.Listen("tcp", ":" + port)
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
