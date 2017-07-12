@@ -29,8 +29,12 @@ func dialOption() grpc.DialOption {
 		return grpc.WithInsecure()
 	}
 
-	creds := credentials.NewTLS(&tls.Config{
-		InsecureSkipVerify: true,
-	})
+	conf := &tls.Config{}
+
+	if os.Getenv("GRPC_USE_TLS_INSECURE") == "true" {
+		conf.InsecureSkipVerify = true
+	}
+
+	creds := credentials.NewTLS(conf)
 	return grpc.WithTransportCredentials(creds)
 }
