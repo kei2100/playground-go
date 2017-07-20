@@ -42,12 +42,12 @@ func createCert(template, parent *x509.Certificate, pub interface{}, parentPriv 
 
 	certDER, err := x509.CreateCertificate(rand.Reader, template, parent, pub, parentPriv)
 	if err != nil {
-		log.Fatalf("failed to create cert: %v", err)
+		log.Fatalf("failed to create Certificate: %v", err)
 	}
 	// parse the resulting certificate so we can use it again
 	cert, err = x509.ParseCertificate(certDER)
 	if err != nil {
-		log.Fatalf("failed to parse cert: %v", err)
+		log.Fatalf("failed to parse Certificate: %v", err)
 	}
 	// PEM encode the certificate (this is a standard TLS encoding)
 	b := pem.Block{Type: "CERTIFICATE", Bytes: certDER}
@@ -56,7 +56,7 @@ func createCert(template, parent *x509.Certificate, pub interface{}, parentPriv 
 }
 
 func certTemplate() *x509.Certificate {
-	// generate a random serial number (a real cert authority would have some logic behind this)
+	// generate a random serial number (a real Certificate authority would have some logic behind this)
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {

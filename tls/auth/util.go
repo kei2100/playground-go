@@ -16,7 +16,7 @@ func genRSAPrivateKey() *rsa.PrivateKey {
 }
 
 func randSerialNumber() *big.Int {
-	// generate a random serial number (a real cert authority would have some logic behind this)
+	// generate a random serial number (a real Certificate authority would have some logic behind this)
 	limit := new(big.Int).Lsh(big.NewInt(1), 128)
 	sn, err := rand.Int(rand.Reader, limit)
 	if err != nil {

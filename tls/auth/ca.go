@@ -6,15 +6,15 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"log"
+	"math/big"
 	"net"
 	"time"
-	"math/big"
 )
 
 // CA acts as a certificate authority
 type CA struct {
-	priv *rsa.PrivateKey
-	Cert *x509.Certificate
+	priv        *rsa.PrivateKey
+	Certificate *x509.Certificate
 }
 
 // NewRootCA returns new root CA
@@ -42,7 +42,7 @@ func NewRootCA() *CA {
 		log.Fatalf("failed to create root certificate: %v", err)
 	}
 
-	ca.Cert, err = x509.ParseCertificate(certDER)
+	ca.Certificate, err = x509.ParseCertificate(certDER)
 	if err != nil {
 		log.Fatalf("failed to parse certDER: %v", err)
 	}
@@ -62,7 +62,7 @@ func (ca *CA) Sign(csr *x509.CertificateRequest) (*x509.Certificate, error) {
 		PublicKey:          csr.PublicKey,
 
 		SerialNumber: big.NewInt(2),
-		Issuer:       ca.Cert.Subject,
+		Issuer:       ca.Certificate.Subject,
 		Subject:      csr.Subject,
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().Add(24 * time.Hour),
@@ -70,7 +70,7 @@ func (ca *CA) Sign(csr *x509.CertificateRequest) (*x509.Certificate, error) {
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
 
-	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &ca.priv.PublicKey, ca.priv)
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, ca.Certificate, csr.PublicKey, ca.priv)
 	if err != nil {
 		log.Fatalf("failed to create root certificate: %v", err)
 	}
