@@ -57,6 +57,8 @@ func handle(src net.Conn) {
 
 	var wg sync.WaitGroup
 
+	// FIXME 現状だと片側クローズされるとハーフオープン状態になる
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
