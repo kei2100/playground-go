@@ -1,4 +1,4 @@
-package concurrent
+package channel
 
 import (
 	"sync"
