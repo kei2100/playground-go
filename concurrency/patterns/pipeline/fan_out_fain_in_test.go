@@ -1,4 +1,4 @@
-package concurrency
+package pipeline
 
 import (
 	"testing"
@@ -12,7 +12,7 @@ func TestFanOutFanIn(t *testing.T) {
 
 	// Fan-in: 複数のchannelを一つに束ねて、全てのchannelがcloseされるまで、束ねた一つのchannelから読み込みを行うパターン
 
-	in := genStringChannel("fan-out", "fan-in", "test")
+	in := gen("fan-out", "fan-in", "test")
 
 	// Fan-out
 	o1 := wordCount(in)
@@ -28,19 +28,6 @@ func TestFanOutFanIn(t *testing.T) {
 	}
 
 	fmt.Println(count)
-}
-
-func genStringChannel(in ...string) <-chan string {
-	out := make(chan string)
-
-	go func() {
-		for _, i := range in {
-			out <- i
-		}
-		close(out)
-	}()
-
-	return out
 }
 
 func wordCount(in <-chan string) <-chan int {

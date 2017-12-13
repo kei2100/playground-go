@@ -1,4 +1,4 @@
-package concurrency
+package pipeline
 
 import (
 	"testing"
