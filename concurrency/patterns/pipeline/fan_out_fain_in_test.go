@@ -52,7 +52,7 @@ func wordCount(ctx context.Context, in <-chan string) <-chan int {
 			case out <- utf8.RuneCountInString(i):
 			case <-ctx.Done():
 				if err := ctx.Err(); err != nil {
-					log.Printf("wordCount: context was canceled or deadline exceeded %v", err.Error())
+					log.Printf("wordCount: context was canceled or deadline exceeded: %v", err)
 				}
 				return
 			}
@@ -76,7 +76,7 @@ func mergeChannels(ctx context.Context, channels ...<-chan int) <-chan int{
 			case out <- i:
 			case <-ctx.Done():
 				if err := ctx.Err(); err != nil {
-					log.Printf("reader: context was canceled or deadline exceeded %v", err.Error())
+					log.Printf("reader: context was canceled or deadline exceeded: %v", err)
 				}
 				return
 			}

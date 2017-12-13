@@ -22,7 +22,7 @@ func TestPipeline(t *testing.T) {
 	for r := range rs {
 		strs = append(strs, r)
 		// このsleepを付けるとctxがタイムアウトする
-		time.Sleep(110 * time.Millisecond)
+		//time.Sleep(110 * time.Millisecond)
 	}
 	fmt.Println(strings.Join(strs, " "))
 }
@@ -42,7 +42,7 @@ func gen(ctx context.Context, strs ...string) <-chan string {
 			case out <- s:
 			case <-ctx.Done():
 				if err := ctx.Err(); err != nil {
-					log.Printf("gen: context was canceled or deadline exceeded %v", err)
+					log.Printf("gen: context was canceled or deadline exceeded: %v", err)
 				}
 				return
 			}
@@ -66,7 +66,7 @@ func toNarrow(ctx context.Context, in <-chan string) <-chan string {
 			case out <- width.Narrow.String(s):
 			case <-ctx.Done():
 				if err := ctx.Err(); err != nil {
-					log.Printf("toNarrow: context was canceled or deadline exceeded %v", err.Error())
+					log.Printf("toNarrow: context was canceled or deadline exceeded: %v", err)
 				}
 				return
 			}
@@ -90,7 +90,7 @@ func toUpper(ctx context.Context, in <-chan string) <-chan string {
 			case out <- width.Narrow.String(s):
 			case <-ctx.Done():
 				if err := ctx.Err(); err != nil {
-					log.Printf("toUpper: context was canceled or deadline exceeded %v", err.Error())
+					log.Printf("toUpper: context was canceled or deadline exceeded: %v", err)
 				}
 				return
 			}
