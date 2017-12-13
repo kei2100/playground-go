@@ -1,57 +1,101 @@
 package pipeline
 
 import (
-	"testing"
-
+	"context"
 	"fmt"
+	"log"
 	"strings"
+	"testing"
+	"time"
 
 	"golang.org/x/text/width"
 )
 
 func TestPipeline(t *testing.T) {
-	t.Parallel()
+	ctx, can := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer can()
 
-	c := gen("ｈｅｌｌｏ", "ｗｏｒｌｄ")
-	rs := toUpper(toNarrow(c))
+	c := gen(ctx, "ｈｅｌｌｏ", "ｗｏｒｌｄ", "ｇｏｌａｎｇ")
+	rs := toUpper(ctx, toNarrow(ctx, c))
 
 	var strs []string
 	for r := range rs {
 		strs = append(strs, r)
+		// このsleepを付けるとctxがタイムアウトする
+		time.Sleep(110 * time.Millisecond)
 	}
 	fmt.Println(strings.Join(strs, " "))
 }
 
 // generate pipeline
-func gen(strs ...string) <-chan string {
+func gen(ctx context.Context, strs ...string) <-chan string {
 	out := make(chan string)
+
 	go func() {
+		defer func() {
+			log.Println("gen: finished. close out channel")
+			close(out)
+		}()
+
 		for _, s := range strs {
-			out <- s
+			select {
+			case out <- s:
+			case <-ctx.Done():
+				if err := ctx.Err(); err != nil {
+					log.Printf("gen: context was canceled or deadline exceeded %v", err)
+				}
+				return
+			}
 		}
-		close(out)
 	}()
+
 	return out
 }
 
-func toNarrow(in <-chan string) <-chan string {
+func toNarrow(ctx context.Context, in <-chan string) <-chan string {
 	out := make(chan string)
+
 	go func() {
+		defer func() {
+			log.Println("toNarrow: finished. close out channel")
+			close(out)
+		}()
+
 		for s := range in {
-			out <- width.Narrow.String(s)
+			select {
+			case out <- width.Narrow.String(s):
+			case <-ctx.Done():
+				if err := ctx.Err(); err != nil {
+					log.Printf("toNarrow: context was canceled or deadline exceeded %v", err.Error())
+				}
+				return
+			}
 		}
-		close(out)
 	}()
+
 	return out
 }
 
-func toUpper(in <-chan string) <-chan string {
+func toUpper(ctx context.Context, in <-chan string) <-chan string {
 	out := make(chan string)
+
 	go func() {
+		defer func() {
+			log.Println("toUpper: finished. close out channel")
+			close(out)
+		}()
+
 		for s := range in {
-			out <- width.Narrow.String(s)
+			select {
+			case out <- width.Narrow.String(s):
+			case <-ctx.Done():
+				if err := ctx.Err(); err != nil {
+					log.Printf("toUpper: context was canceled or deadline exceeded %v", err.Error())
+				}
+				return
+			}
 		}
-		close(out)
 	}()
+
 	return out
 }
