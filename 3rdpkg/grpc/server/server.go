@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 
-	pb "github.com/kei2100/playground-go/grpc/hello"
+	pb "github.com/kei2100/playground-go/3rdpkg/grpc/hello"
 
 	"os"
 

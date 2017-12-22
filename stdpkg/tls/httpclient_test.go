@@ -1,14 +1,16 @@
-package main
+package tls
 
 import (
 	"crypto/tls"
 	"log"
 	"net/http"
 
+	"testing"
+
 	"github.com/kei2100/playground-go/util/ioutil"
 )
 
-func main() {
+func TestHttpClient(t *testing.T) {
 	// ルート認証局を設定する場合
 	//
 	// roots := x509.NewCertPool()
