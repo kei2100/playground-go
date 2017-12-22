@@ -29,7 +29,6 @@ func (t *SomeTask) Do(ctx context.Context) error {
 func (t *SomeTask) free() { fmt.Println("free something resource") }
 
 func TestContextWithTimeout(t *testing.T) {
-
 	tests := []struct {
 		subject   string
 		taskWait  time.Duration
