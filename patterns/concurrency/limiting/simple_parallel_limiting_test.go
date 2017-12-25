@@ -8,17 +8,48 @@ import (
 	"time"
 )
 
-func TestSimpleParallelLimiting(t *testing.T) {
-	stopCount := make(chan struct{})
+type goroutinesCounter struct {
+	done chan struct{}
+}
+
+func newGoroutinesCounter() *goroutinesCounter {
+	return &goroutinesCounter{
+		done: make(chan struct{}),
+	}
+}
+
+func (c *goroutinesCounter) start() <-chan int {
+	count := make(chan int)
 	go func() {
+		defer close(count)
 		for {
 			select {
-			case <-stopCount:
+			case <-c.done:
+				close(c.done)
 				return
-			default:
-				fmt.Printf("goroutines count: %v\n", runtime.NumGoroutine())
-				time.Sleep(1 * time.Second)
+			case <-time.After(1 * time.Second):
+				count <- runtime.NumGoroutine()
 			}
+		}
+	}()
+	return count
+}
+
+func (c *goroutinesCounter) stop() {
+	c.done <- struct{}{}
+	for range c.done {
+		// wait for close(c.done)
+	}
+}
+
+func TestSimpleParallelLimiting(t *testing.T) {
+	counter := newGoroutinesCounter()
+	countCh := counter.start()
+	defer counter.stop()
+
+	go func() {
+		for c := range countCh {
+			fmt.Printf("goroutines count: %v\n", c)
 		}
 	}()
 
@@ -41,5 +72,4 @@ func TestSimpleParallelLimiting(t *testing.T) {
 	}
 
 	wg.Wait()
-	close(stopCount)
 }
