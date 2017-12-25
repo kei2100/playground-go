@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -37,4 +38,25 @@ func TestSendingTimeout(t *testing.T) {
 			t.Errorf(" got %v, want %v", g, w)
 		}
 	}
+}
+
+func TestForSelect(t *testing.T) {
+	ch := make(chan int)
+
+	go func() {
+		i := 0
+		for {
+			select {
+			case ch <- i:
+				return
+			default:
+				// chが受信されなければdefaultにいき、次のループに入る
+				time.Sleep(1 * time.Millisecond)
+				i++
+			}
+		}
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+	fmt.Println(<-ch)
 }
