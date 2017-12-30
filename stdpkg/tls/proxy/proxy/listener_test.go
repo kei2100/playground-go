@@ -16,8 +16,9 @@ func TestListenAndServe(t *testing.T) {
 
 	errCh := make(chan error)
 	go func() {
-		err := ln.Serve(func(conn *net.TCPConn) {
+		err := ln.Serve(func(conn net.Conn) {
 			defer conn.Close()
+			// do echo
 			io.Copy(conn, conn)
 		})
 		errCh <- err

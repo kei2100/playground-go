@@ -7,7 +7,7 @@ import (
 )
 
 // HandleFunc is the handler for accepted Connection
-type HandleFunc func(conn *net.TCPConn)
+type HandleFunc func(conn net.Conn)
 
 // ConnOption is the functional option for accepted connection
 type ConnOption func(conn *net.TCPConn)
@@ -65,6 +65,6 @@ func (ln *Listener) Serve(handler HandleFunc, opts ...ConnOption) error {
 		for _, o := range opts {
 			o(conn)
 		}
-		handler(conn)
+		go handler(conn)
 	}
 }
