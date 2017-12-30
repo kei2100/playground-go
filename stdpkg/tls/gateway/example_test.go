@@ -1,14 +1,13 @@
 package gateway_test
 
 import (
-	"bytes"
-	"io"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"time"
 
 	"github.com/kei2100/playground-go/stdpkg/tls/gateway"
-	"fmt"
 )
 
 func ExampleGateway() {
@@ -52,13 +51,12 @@ func startRemoteServer() (net.Listener, <-chan []byte) {
 		}
 		defer conn.Close()
 
-		b := new(bytes.Buffer)
-		_, err = io.Copy(b, conn)
+		b, err := ioutil.ReadAll(conn)
 		if err != nil {
 			log.Fatalf("gateway_test: failed to read bytes: %v", err)
 		}
 
-		received <- b.Bytes()
+		received <- b
 		close(received)
 	}()
 
