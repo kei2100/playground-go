@@ -1,4 +1,4 @@
-package proxy
+package gateway
 
 import (
 	"fmt"
@@ -6,28 +6,28 @@ import (
 	"time"
 )
 
-// HandleFunc is the handler for accepted Connection
-type HandleFunc func(conn net.Conn)
+// RouteFunc is the router for accepted Connection
+type RouteFunc func(conn net.Conn)
 
 // ConnOption is the functional option for accepted connection
 type ConnOption func(conn *net.TCPConn)
 
-// SetKeepAlive to TCP Connection
-func SetKeepAlive(keepalive bool) ConnOption {
+// WittKeepAlive option
+func WithKeepAlive(keepalive bool) ConnOption {
 	return func(conn *net.TCPConn) {
 		conn.SetKeepAlive(keepalive)
 	}
 }
 
-// SetKeepAlivePeriod to TCP Connection
-func SetKeepAlivePeriod(d time.Duration) ConnOption {
+// WithKeepAlivePeriod option
+func WithKeepAlivePeriod(d time.Duration) ConnOption {
 	return func(conn *net.TCPConn) {
 		conn.SetKeepAlivePeriod(d)
 	}
 }
 
-// SetNoDelay to TCP Connection
-func SetNoDelay(noDelay bool) ConnOption {
+// WithNoDelay option
+func WithNoDelay(noDelay bool) ConnOption {
 	return func(conn *net.TCPConn) {
 		conn.SetNoDelay(noDelay)
 	}
@@ -54,9 +54,9 @@ func Listen() (*Listener, error) {
 	return &Listener{TCPListener: ln}, nil
 }
 
-// Serve calls handler to handle the incoming connections and continue waiting for the next connections.
+// Serve calls router to handle the incoming connections and continue waiting for the next connections.
 // Serve always returns a non-nil error.
-func (ln *Listener) Serve(handler HandleFunc, opts ...ConnOption) error {
+func (ln *Listener) Serve(router RouteFunc, opts ...ConnOption) error {
 	for {
 		conn, err := ln.AcceptTCP()
 		if err != nil {
@@ -65,6 +65,6 @@ func (ln *Listener) Serve(handler HandleFunc, opts ...ConnOption) error {
 		for _, o := range opts {
 			o(conn)
 		}
-		go handler(conn)
+		go router(conn)
 	}
 }
