@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/kei2100/playground-go/stdpkg/tls/gateway"
+	"github.com/kei2100/playground-go/mylib/tls/gateway"
 )
 
 func ExampleGateway() {
