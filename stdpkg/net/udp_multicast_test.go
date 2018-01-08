@@ -32,6 +32,7 @@ func (s *multicastUnixTimeServer) serve() error {
 		select {
 		case <-tick.C:
 			binary.LittleEndian.PutUint64(b, uint64(time.Now().Unix()))
+			conn.SetDeadline(time.Now().Add(3 * time.Second))
 			if _, err := conn.Write(b); err != nil {
 				return fmt.Errorf("net: failed to write to the connection: %v", err)
 			}
@@ -79,12 +80,19 @@ func (c *multicastClient) listen() (<-chan []byte, error) {
 				return
 			default:
 				b := make([]byte, 8)
+				conn.SetDeadline(time.Now().Add(3 * time.Second))
 				l, _, err := conn.ReadFromUDP(b)
 				if err != nil {
 					fmt.Printf("net: faield to read from the connection: %v", err)
 					return
 				}
-				data <- b[:l]
+
+				select {
+				case data <- b[:l]:
+					continue
+				case <-c.stopSig:
+					return
+				}
 			}
 		}
 	}()
