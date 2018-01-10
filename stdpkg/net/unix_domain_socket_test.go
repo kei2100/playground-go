@@ -1,61 +1,96 @@
 package net
 
 import (
-	"path/filepath"
-	"os"
-	"net"
+	"bufio"
+	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
+	"net"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
-// TODO server pattern
-type unixSocketServer struct {
-	sockpath string
-	stopSignal chan struct{}
+type unixSocket struct {
+	path     string
+	listener net.Listener
 }
 
-func (s *unixSocketServer) listenAndServe() error {
-	s.sockpath = filepath.Join(os.TempDir(), "unix_socket_server_test.sock")
-	ln, err := net.Listen("unix", s.sockpath)
+func listenUnixSocket() (*unixSocket, error) {
+	p := filepath.Join(os.TempDir(), "unix_socket_server_test.sock")
+	os.Remove(p)
+
+	ln, err := net.Listen("unix", p)
 	if err != nil {
-		return fmt.Errorf("failed to listen: %v", err)
+		return nil, fmt.Errorf("failed to listen: %v", err)
 	}
+	return &unixSocket{path: p, listener: ln}, nil
+}
+
+type unixSocketServer struct {
+	sock *unixSocket
+	done chan struct{}
+}
+
+func newUnixSocketServer(sock *unixSocket) *unixSocketServer {
+	return &unixSocketServer{sock: sock, done: make(chan struct{})}
+}
+
+func (s *unixSocketServer) serve() error {
 	defer func() {
-		if err := ln.Close(); err != nil {
-			fmt.Printf("listener close error :%v", err)
-		}
-		if err := os.Remove(s.sockpath); err != nil {
-			fmt.Printf("faield to remove %v :%v", s.sockpath, err)
-		}
+		s.sock.listener.Close()
+		os.Remove(s.sock.path)
 	}()
 
-	handler := func(conn net.Conn) {
-		defer conn.Close()
-		io.Copy(conn, conn)
-	}
-	acceptor := func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				fmt.Printf("failed to accept: %v", err)
-				return
+	for {
+		conn, err := s.sock.listener.Accept()
+		if err != nil {
+			select {
+			case <-s.done:
+				return errors.New("server closed")
+			default:
+				return err
 			}
-			go handler(conn)
 		}
+		go func() {
+			defer conn.Close()
+			r := bufio.NewReader(conn)
+			b, err := r.ReadBytes('\n')
+			if err != nil {
+				fmt.Printf("failed to read %v", err)
+			}
+			conn.Write(b)
+		}()
 	}
-	go acceptor()
-
-	s.stopSignal = make(chan struct{})
-	<-s.stopSignal
-
-	return fmt.Errorf("server stopSignal received")
 }
 
-func (s *unixSocketServer) stop() {
-	close(s.stopSignal)
+func (s *unixSocketServer) close() {
+	close(s.done)
+	s.sock.listener.Close()
 }
 
 func TestUnixSocketServer(t *testing.T) {
+	sock, err := listenUnixSocket()
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	srv := newUnixSocketServer(sock)
+	go srv.serve()
+	defer srv.close()
+
+	conn, err := net.Dial("unix", sock.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	conn.Write([]byte("hello\n"))
+	got, err := ioutil.ReadAll(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g, w := string(got), "hello\n"; g != w {
+		t.Errorf("received got %v, want %v", g, w)
+	}
 }
