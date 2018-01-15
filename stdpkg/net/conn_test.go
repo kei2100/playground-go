@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -100,8 +101,6 @@ func TestConnSetDeadline(t *testing.T) {
 }
 
 func TestConnSetKeepalive(t *testing.T) {
-	t.Parallel()
-
 	kaln := listenTCP(t)
 	nokaln := listenTCP(t)
 
@@ -113,33 +112,44 @@ func TestConnSetKeepalive(t *testing.T) {
 			defer conn.Close()
 			conn.SetKeepAlive(true)
 			conn.SetKeepAlivePeriod(time.Second)
+
 			r := bufio.NewReader(conn)
-			r.ReadBytes('\n')
+			b, err := r.ReadBytes('\n')
+			fmt.Printf("keep alive server read finished: n bytes %v: err %v\n", len(b), err)
 		})
 	}()
 
 	go func() {
 		serveTCP(t, nokaln, func(conn *net.TCPConn) {
 			defer conn.Close()
+
 			r := bufio.NewReader(conn)
-			r.ReadBytes('\n')
+			b, err := r.ReadBytes('\n')
+			fmt.Printf("no keep alive server read finished: n bytes %v: err %v\n", len(b), err)
 		})
 	}()
 
 	go dialTCP(t, kaln.Addr(), func(conn *net.TCPConn) {
-		for {
-			time.Sleep(time.Second)
-		}
+		defer conn.Close()
+		fmt.Printf("receive keepalive client addr   :%v\n", conn.LocalAddr())
+
+		r := bufio.NewReader(conn)
+		b, err := r.ReadBytes('\n')
+		fmt.Printf("receive keepalive client read finished: n bytes %v: err %v\n", len(b), err)
 	})
 	go dialTCP(t, nokaln.Addr(), func(conn *net.TCPConn) {
-		for {
-			time.Sleep(time.Second)
-		}
+		defer conn.Close()
+		fmt.Printf("receive no keepalive client addr:%v\n", conn.LocalAddr())
+
+		r := bufio.NewReader(conn)
+		b, err := r.ReadBytes('\n')
+		fmt.Printf("receive no keepalive client read finished: n bytes %v: err %v\n", len(b), err)
 	})
 
 	// wait to TERMINATE
 	for {
-		time.Sleep(time.Second)
+		fmt.Printf("num goroutines: %v\n", runtime.NumGoroutine())
+		time.Sleep(3 * time.Second)
 	}
 
 	// (a) tcpdump -i lo0 src port {keepalive server port}
@@ -147,4 +157,13 @@ func TestConnSetKeepalive(t *testing.T) {
 	// すると、
 	// (a)側には1秒ごとにkeepalive probeパケットがクライアントに送信されるのが確認できる。
 	// (b)は何も流れない。
+
+	// OSXで /etc/pf.confに、
+	// block in on lo0 proto tcp from self port {ka server port} to self port {ka client port}
+	// を追記して、
+	// pfctl -f /etc/pf.conf （pf.confの内容反映）
+	// pfctl -e（pfを有効化）
+	// すると、
+	// keepalive probeがclientに届かなくなるため、
+	// probeカウント超過後（デフォ9回？）にサーバー側でconn.readがerrで終了することを確認できる。
 }
