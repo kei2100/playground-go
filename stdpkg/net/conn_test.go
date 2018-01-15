@@ -1,6 +1,8 @@
 package net
 
 import (
+	"bufio"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"testing"
@@ -95,4 +97,54 @@ func TestConnSetDeadline(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Error("timeout exceeded while waiting for rch")
 	}
+}
+
+func TestConnSetKeepalive(t *testing.T) {
+	t.Parallel()
+
+	kaln := listenTCP(t)
+	nokaln := listenTCP(t)
+
+	fmt.Printf("keepalive server addr   : %v\n", kaln.Addr())
+	fmt.Printf("no keepalive server addr: %v\n", nokaln.Addr())
+
+	go func() {
+		serveTCP(t, kaln, func(conn *net.TCPConn) {
+			defer conn.Close()
+			conn.SetKeepAlive(true)
+			conn.SetKeepAlivePeriod(time.Second)
+			r := bufio.NewReader(conn)
+			r.ReadBytes('\n')
+		})
+	}()
+
+	go func() {
+		serveTCP(t, nokaln, func(conn *net.TCPConn) {
+			defer conn.Close()
+			r := bufio.NewReader(conn)
+			r.ReadBytes('\n')
+		})
+	}()
+
+	go dialTCP(t, kaln.Addr(), func(conn *net.TCPConn) {
+		for {
+			time.Sleep(time.Second)
+		}
+	})
+	go dialTCP(t, nokaln.Addr(), func(conn *net.TCPConn) {
+		for {
+			time.Sleep(time.Second)
+		}
+	})
+
+	// wait to TERMINATE
+	for {
+		time.Sleep(time.Second)
+	}
+
+	// (a) tcpdump -i lo0 src port {keepalive server port}
+	// (b) tcpdump -i lo0 src port {no keepalive server port}
+	// すると、
+	// (a)側には1秒ごとにkeepalive probeパケットがクライアントに送信されるのが確認できる。
+	// (b)は何も流れない。
 }
