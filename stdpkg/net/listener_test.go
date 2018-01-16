@@ -10,6 +10,8 @@ import (
 const tcp = "tcp"
 
 func TestListenFreePort(t *testing.T) {
+	t.Parallel()
+
 	// Linux では、ポート番号として 0 を指定して bind() を呼び出した場合や、
 	// bind() を呼び出さずに connect() を呼び出した場合などに、
 	// 未使用のローカルポート番号が自動的に割り当てられる。
@@ -28,6 +30,8 @@ func TestListenFreePort(t *testing.T) {
 }
 
 func TestListenerAcceptFromClosedListener(t *testing.T) {
+	t.Parallel()
+
 	addr, err := net.ResolveTCPAddr(tcp, "localhost:0")
 	if err != nil {
 		t.Fatal(err)
@@ -60,6 +64,8 @@ func TestListenerAcceptFromClosedListener(t *testing.T) {
 }
 
 func TestListenerAcceptDeadlineExceeded(t *testing.T) {
+	t.Parallel()
+
 	addr, err := net.ResolveTCPAddr(tcp, "localhost:0")
 	if err != nil {
 		t.Fatal(err)
@@ -88,5 +94,22 @@ func TestListenerAcceptDeadlineExceeded(t *testing.T) {
 		return
 	case <-time.After(1 * time.Second):
 		t.Errorf("timeout exceeded while waiting for send error")
+	}
+}
+
+func TestListenerDoubleClose(t *testing.T) {
+	t.Parallel()
+
+	ln, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ln.Close(); err != nil {
+		t.Errorf("got %v, want no error", err)
+	}
+	if err := ln.Close(); err == nil {
+		// err e.g: close tcp 127.0.0.1:53114: use of closed network connection,
+		t.Error("got nil, want an error")
 	}
 }
