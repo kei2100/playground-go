@@ -9,12 +9,12 @@ type closer interface {
 // Closer provides once Close() call
 type Closer struct {
 	closer closer
-	once   *sync.Once
+	once   sync.Once
 }
 
 // NewCloser returns new Closer
 func NewCloser(impl closer) *Closer {
-	return &Closer{closer: impl, once: new(sync.Once)}
+	return &Closer{closer: impl}
 }
 
 // Close once call closer.Close()
