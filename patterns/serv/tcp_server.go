@@ -5,34 +5,33 @@ import (
 	"errors"
 	"log"
 	"net"
-	"sync/atomic"
+	"sync"
 	"time"
 )
 
 var ErrServerClosed = errors.New("serv: server closed")
 
-const notClosed int32 = 0
-const closed int32 = 1
+const (
+	stateListening = iota
+	stateClosed
+)
 
-type listener struct {
-	ln     net.Listener
-	closed int32
+type servState int32
+
+func (st *servState) IsListening() bool {
+	return *st == stateListening
 }
 
-func newListener(ln net.Listener) *listener {
-	return &listener{ln: ln}
+func (st *servState) setListening() {
+	*st = stateListening
 }
 
-func (ln *listener) Close() error {
-	if !atomic.CompareAndSwapInt32(&ln.closed, notClosed, closed) {
-		return errors.New("serv: listener already closed")
-	}
-	return ln.ln.Close()
+func (st *servState) IsClosed() bool {
+	return *st == stateClosed
 }
 
-func (ln *listener) Closed() bool {
-	c := atomic.LoadInt32(&ln.closed)
-	return c == closed
+func (st *servState) setClosed() {
+	*st = stateClosed
 }
 
 // TODO set handler
@@ -42,20 +41,24 @@ func (ln *listener) Closed() bool {
 
 // base on http stdpkg
 type TCPServer struct {
-	ln      *listener
+	mu sync.Mutex
+	servState
+	ln      net.Listener
 	handler func(net.Conn)
 }
 
 func (s *TCPServer) Serve(ln net.Listener) error {
-	s.ln = newListener(ln)
-	defer s.ln.Close()
+	s.mu.Lock()
+	s.ln = ln
+	s.setListening()
+	s.mu.Unlock()
 
 	var tempDelay time.Duration
 
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			if s.ln.Closed() {
+			if s.IsClosed() {
 				return ErrServerClosed
 			}
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
@@ -79,7 +82,17 @@ func (s *TCPServer) Serve(ln net.Listener) error {
 }
 
 func (s *TCPServer) Close() error {
-	return s.ln.Close()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if !s.IsListening() {
+		return nil
+	}
+	err := s.ln.Close()
+	s.ln = nil
+	s.setClosed()
+
+	return err
 }
 
 func (s *TCPServer) Shutdown(ctx context.Context) error {
