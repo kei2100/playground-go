@@ -57,7 +57,7 @@ func (s *TCPServer) Serve(ln net.Listener) error {
 	var tempDelay time.Duration
 
 	for {
-		conn, err := ln.Accept()
+		conn, err := s.ln.Accept()
 		if err != nil {
 			if s.ln.Closed() {
 				return ErrServerClosed
