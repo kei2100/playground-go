@@ -23,10 +23,6 @@ func newListener(ln net.Listener) *listener {
 	return &listener{ln: ln}
 }
 
-func (ln *listener) Accept() (net.Conn, error) {
-	return ln.ln.Accept()
-}
-
 func (ln *listener) Close() error {
 	if !atomic.CompareAndSwapInt32(&ln.closed, notClosed, closed) {
 		return errors.New("serv: listener already closed")
@@ -57,7 +53,7 @@ func (s *TCPServer) Serve(ln net.Listener) error {
 	var tempDelay time.Duration
 
 	for {
-		conn, err := s.ln.Accept()
+		conn, err := ln.Accept()
 		if err != nil {
 			if s.ln.Closed() {
 				return ErrServerClosed
