@@ -7,13 +7,14 @@ import (
 	"net"
 	"sync"
 	"time"
+	"fmt"
 )
 
 var ErrServerClosed = errors.New("serv: server closed")
 
 const (
-	stateListening = iota
-	stateClosed
+	stateClosed = iota
+	stateListening
 )
 
 type servState int32
@@ -49,6 +50,9 @@ type TCPServer struct {
 
 func (s *TCPServer) Serve(ln net.Listener) error {
 	s.mu.Lock()
+	if s.IsListening() {
+		return fmt.Errorf("serv: already listening")
+	}
 	s.ln = ln
 	s.setListening()
 	s.mu.Unlock()
