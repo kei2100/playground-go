@@ -5,9 +5,20 @@ import (
 	"errors"
 	"io/ioutil"
 	"net"
+	"sync"
 	"testing"
 	"time"
 )
+
+func mustTCPListen(t *testing.T) net.Listener {
+	t.Helper()
+
+	ln, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ln
+}
 
 func TestTCPServer_ServeClose(t *testing.T) {
 	t.Parallel()
@@ -27,10 +38,7 @@ func TestTCPServer_ServeClose(t *testing.T) {
 		},
 	}
 
-	ln, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	ln := mustTCPListen(t)
 
 	closed := make(chan struct{})
 	go func() {
@@ -156,4 +164,70 @@ func TestTCPServer_HandleAcceptError(t *testing.T) {
 			t.Errorf("timeout exceeded while waiting for serv Close")
 		}
 	})
+}
+
+func TestTCPServer_DoubleServe(t *testing.T) {
+	t.Parallel()
+
+	ln := mustTCPListen(t)
+	s := new(TCPServer)
+	defer s.Close()
+
+	errch := make(chan error, 2)
+
+	// 片方すぐエラーになること
+	go func() {
+		errch <- s.Serve(ln)
+	}()
+	go func() {
+		errch <- s.Serve(ln)
+	}()
+
+	select {
+	case err := <-errch:
+		if err == nil {
+			t.Errorf("got nil, want an error")
+		}
+	case <-time.After(3 * time.Second):
+		t.Errorf("timeout exceeded while waiting for serv Close")
+	}
+}
+
+func TestTCPServer_DoubleClose(t *testing.T) {
+	t.Parallel()
+
+	s := new(TCPServer)
+	defer s.Close()
+
+	wg := sync.WaitGroup{}
+	closeFunc := func(num int) {
+		defer wg.Done()
+		if err := s.Close(); err != nil {
+			t.Errorf("num %v got %v, want nil", num, err)
+		}
+	}
+
+	wg.Add(2)
+	go closeFunc(1)
+	go closeFunc(2)
+	wg.Wait()
+
+	ln := mustTCPListen(t)
+	done := make(chan struct{})
+	go func() {
+		s.Serve(ln)
+		close(done)
+	}()
+
+	wg.Add(2)
+	go closeFunc(3)
+	go closeFunc(4)
+	wg.Wait()
+
+	select {
+	case <-done:
+		return
+	case <-time.After(3 * time.Second):
+		t.Errorf("timeout exceeded while waiting for serv Close")
+	}
 }

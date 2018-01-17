@@ -3,11 +3,11 @@ package serv
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"sync"
 	"time"
-	"fmt"
 )
 
 var ErrServerClosed = errors.New("serv: server closed")
@@ -49,13 +49,16 @@ type TCPServer struct {
 }
 
 func (s *TCPServer) Serve(ln net.Listener) error {
-	s.mu.Lock()
-	if s.IsListening() {
-		return fmt.Errorf("serv: already listening")
+	if err := s.withLockDo(func() error {
+		if s.IsListening() {
+			return fmt.Errorf("serv: already listening")
+		}
+		s.ln = ln
+		s.setListening()
+		return nil
+	}); err != nil {
+		return err
 	}
-	s.ln = ln
-	s.setListening()
-	s.mu.Unlock()
 
 	var tempDelay time.Duration
 
@@ -86,19 +89,25 @@ func (s *TCPServer) Serve(ln net.Listener) error {
 }
 
 func (s *TCPServer) Close() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	return s.withLockDo(func() error {
+		if s.IsClosed() {
+			return nil
+		}
+		err := s.ln.Close()
+		s.ln = nil
+		s.setClosed()
 
-	if !s.IsListening() {
-		return nil
-	}
-	err := s.ln.Close()
-	s.ln = nil
-	s.setClosed()
-
-	return err
+		return err
+	})
 }
 
 func (s *TCPServer) Shutdown(ctx context.Context) error {
 	return nil
+}
+
+func (s *TCPServer) withLockDo(f func() error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return f()
 }
