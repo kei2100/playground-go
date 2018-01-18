@@ -166,4 +166,5 @@ func TestConnSetKeepalive(t *testing.T) {
 	// すると、
 	// keepalive probeがclientに届かなくなるため、
 	// probeカウント超過後（デフォ9回？）にサーバー側でconn.readがerrで終了することを確認できる。
+	// カウント超過前に pfctl -d（pfを無効化）すれば、errにはならずprobe送信を継続する。
 }
