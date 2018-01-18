@@ -35,8 +35,8 @@ func (st *servState) setClosed() {
 	*st = stateClosed
 }
 
-// TODO set handler
-// TODO avoid dup serve & close
+type TCPHandleFunc func(net.Conn)
+
 // TODO configure timeout
 // TODO shutdown
 
@@ -44,11 +44,10 @@ func (st *servState) setClosed() {
 type TCPServer struct {
 	mu sync.Mutex
 	servState
-	ln      net.Listener
-	handler func(net.Conn)
+	ln net.Listener
 }
 
-func (s *TCPServer) Serve(ln net.Listener) error {
+func (s *TCPServer) Serve(ln net.Listener, handler TCPHandleFunc) error {
 	if err := s.withLockDo(func() error {
 		if s.IsListening() {
 			return fmt.Errorf("serv: already listening")
@@ -84,7 +83,7 @@ func (s *TCPServer) Serve(ln net.Listener) error {
 			return err
 		}
 		tempDelay = 0
-		go s.handler(conn)
+		go handler(conn)
 	}
 }
 

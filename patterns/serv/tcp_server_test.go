@@ -20,29 +20,32 @@ func mustTCPListen(t *testing.T) net.Listener {
 	return ln
 }
 
+var nopTCPHandler = func(conn net.Conn) {
+	conn.Close()
+}
+
 func TestTCPServer_ServeClose(t *testing.T) {
 	t.Parallel()
 
-	s := &TCPServer{
-		handler: func(conn net.Conn) {
-			defer conn.Close()
-			// echo
-			r := bufio.NewReader(conn)
-			b, err := r.ReadBytes('\n')
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := conn.Write(b); err != nil {
-				t.Fatal(err)
-			}
-		},
+	handler := func(conn net.Conn) {
+		defer conn.Close()
+		// echo
+		r := bufio.NewReader(conn)
+		b, err := r.ReadBytes('\n')
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := conn.Write(b); err != nil {
+			t.Fatal(err)
+		}
 	}
 
+	s := new(TCPServer)
 	ln := mustTCPListen(t)
 
 	closed := make(chan struct{})
 	go func() {
-		err := s.Serve(ln)
+		err := s.Serve(ln, handler)
 		if g, w := err, ErrServerClosed; g != w {
 			t.Errorf("Serve returns got %v, want %v", g, w)
 		}
@@ -119,7 +122,7 @@ func TestTCPServer_HandleAcceptError(t *testing.T) {
 
 		closed := make(chan struct{})
 		go func() {
-			err := s.Serve(ln)
+			err := s.Serve(ln, nopTCPHandler)
 			if g, w := err, ErrServerClosed; g != w {
 				t.Errorf("Serve returns got %v, want %v", g, w)
 			}
@@ -150,7 +153,7 @@ func TestTCPServer_HandleAcceptError(t *testing.T) {
 
 		closed := make(chan struct{})
 		go func() {
-			got := s.Serve(ln)
+			got := s.Serve(ln, nopTCPHandler)
 			if g, w := got.Error(), want.Error(); g != w {
 				t.Errorf("Serve returns got %v, want %v", g, w)
 			}
@@ -177,10 +180,10 @@ func TestTCPServer_DoubleServe(t *testing.T) {
 
 	// 片方すぐエラーになること
 	go func() {
-		errch <- s.Serve(ln)
+		errch <- s.Serve(ln, nopTCPHandler)
 	}()
 	go func() {
-		errch <- s.Serve(ln)
+		errch <- s.Serve(ln, nopTCPHandler)
 	}()
 
 	select {
@@ -215,7 +218,7 @@ func TestTCPServer_DoubleClose(t *testing.T) {
 	ln := mustTCPListen(t)
 	done := make(chan struct{})
 	go func() {
-		s.Serve(ln)
+		s.Serve(ln, nopTCPHandler)
 		close(done)
 	}()
 
