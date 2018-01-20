@@ -129,7 +129,9 @@ func (s *TCPServer) Serve(ln net.Listener, handler TCPHandleFunc, opts ...TCPSer
 		}
 		tempDelay = 0
 
-		go handler(conn)
+		c := newTCPServeConn(s, conn)
+		c.setOptions(s.connOpts)
+		go handler(c)
 	}
 }
 
@@ -183,6 +185,23 @@ func (s *TCPServer) withLockDo(f func() error) error {
 }
 
 type tcpServerConn struct {
-	net.Conn
 	s *TCPServer
+	net.Conn
+}
+
+func newTCPServeConn(s *TCPServer, conn net.Conn) *tcpServerConn {
+	return &tcpServerConn{s: s, Conn: conn}
+}
+
+func (c *tcpServerConn) setOptions(o TCPConnOptions) {
+	if conn, ok := c.Conn.(*net.TCPConn); ok && o.KeepAlivePeriod > 0 {
+		conn.SetKeepAlive(o.KeepAlive)
+		conn.SetKeepAlivePeriod(o.KeepAlivePeriod)
+	}
+	if t := o.ReadTimeout; t > 0 {
+		c.Conn.SetReadDeadline(time.Now().Add(t))
+	}
+	if t := o.WriteTimeout; t > 0 {
+		c.Conn.SetWriteDeadline(time.Now().Add(t))
+	}
 }

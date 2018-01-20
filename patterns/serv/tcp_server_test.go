@@ -113,7 +113,7 @@ func (e *temporaryError) Temporary() bool {
 	return true
 }
 
-func TestTCPServer_HandleAcceptError(t *testing.T) {
+func TestTCPServer_Serve_HandleAcceptError(t *testing.T) {
 	t.Parallel()
 
 	t.Run("temporary error", func(t *testing.T) {
@@ -233,4 +233,39 @@ func TestTCPServer_DoubleClose(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Errorf("timeout exceeded while waiting for serv Close")
 	}
+}
+
+func TestTCPServer_Serve_WithOptions(t *testing.T) {
+	t.Parallel()
+
+	serveAndDial := func(o TCPServerOptions, f TCPHandleFunc) *TCPServer {
+		ln := mustTCPListen(t)
+		s := new(TCPServer)
+		go s.Serve(ln, f, o)
+
+		if _, err := net.Dial("tcp", ln.Addr().String()); err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+
+	t.Run("ReadTimeout", func(t *testing.T) {
+		errCh := make(chan error, 1)
+		s := serveAndDial(WithReadTimeout(100*time.Millisecond), func(conn net.Conn) {
+			defer conn.Close()
+			_, err := ioutil.ReadAll(conn)
+			errCh <- err
+		})
+		defer s.Close()
+
+		select {
+		case err := <-errCh:
+			if err == nil {
+				t.Error("errCh got nil, want an error")
+			}
+			// ok
+		case <-time.After(1 * time.Second):
+			t.Errorf("timeout exceeded while waiting for serv Close")
+		}
+	})
 }
