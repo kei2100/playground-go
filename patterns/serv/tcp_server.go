@@ -35,21 +35,6 @@ func (st *servState) setClosed() {
 	*st = stateClosed
 }
 
-type TCPConnOptions struct {
-	KeepAlive       bool
-	KeepAlivePeriod time.Duration
-	ReadTimeout     time.Duration
-	WriteTimeout    time.Duration
-}
-
-func defaultTCPConnOptions() TCPConnOptions {
-	return TCPConnOptions{
-		KeepAlive:       true,
-		KeepAlivePeriod: 1 * time.Minute,
-		ReadTimeout:     3 * time.Minute,
-	}
-}
-
 type TCPServerOptions func(*TCPServer)
 
 func WithKeepAlive(keepalive bool) TCPServerOptions {
@@ -84,7 +69,6 @@ func WithConnOptions(o TCPConnOptions) TCPServerOptions {
 
 type TCPHandleFunc func(net.Conn)
 
-// TODO configure timeout
 // TODO shutdown
 // TODO error msg
 
@@ -191,6 +175,21 @@ type tcpServerConn struct {
 
 func newTCPServeConn(s *TCPServer, conn net.Conn) *tcpServerConn {
 	return &tcpServerConn{s: s, Conn: conn}
+}
+
+type TCPConnOptions struct {
+	KeepAlive       bool
+	KeepAlivePeriod time.Duration
+	ReadTimeout     time.Duration
+	WriteTimeout    time.Duration
+}
+
+func defaultTCPConnOptions() TCPConnOptions {
+	return TCPConnOptions{
+		KeepAlive:       true,
+		KeepAlivePeriod: 1 * time.Minute,
+		ReadTimeout:     3 * time.Minute,
+	}
 }
 
 func (c *tcpServerConn) setOptions(o TCPConnOptions) {
