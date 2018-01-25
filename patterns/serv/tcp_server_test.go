@@ -62,10 +62,7 @@ func TestTCPServer_ServeClose(t *testing.T) {
 		close(closed)
 	}()
 
-	conn, err := net.Dial("tcp", ln.Addr().String())
-	if err != nil {
-		t.Fatal(err)
-	}
+	conn := mustTCPDial(t, ln.Addr())
 	defer conn.Close()
 
 	if _, err := conn.Write([]byte("hello\n")); err != nil {
@@ -252,10 +249,7 @@ func TestTCPServer_Serve_WithOptions(t *testing.T) {
 		ln := mustTCPListen(t)
 		s := new(TCPServer)
 		go s.Serve(ln, f, o)
-
-		if _, err := net.Dial("tcp", ln.Addr().String()); err != nil {
-			t.Fatal(err)
-		}
+		mustTCPDial(t, ln.Addr())
 		return s
 	}
 
