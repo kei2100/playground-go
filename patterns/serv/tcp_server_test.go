@@ -20,6 +20,16 @@ func mustTCPListen(t *testing.T) net.Listener {
 	return ln
 }
 
+func mustTCPDial(t *testing.T, addr net.Addr) net.Conn {
+	t.Helper()
+
+	conn, err := net.Dial("tcp", addr.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
 var nopTCPHandler = func(conn net.Conn) {
 	conn.Close()
 }
@@ -76,7 +86,7 @@ func TestTCPServer_ServeClose(t *testing.T) {
 	case <-closed:
 		// test ok
 	case <-time.After(3 * time.Second):
-		t.Errorf("timeout exceeded while waiting for serv Close")
+		t.Fatal("timeout exceeded while waiting for serv Close")
 	}
 }
 
@@ -142,7 +152,7 @@ func TestTCPServer_Serve_HandleAcceptError(t *testing.T) {
 		case <-closed:
 			// test ok
 		case <-time.After(3 * time.Second):
-			t.Errorf("timeout exceeded while waiting for serv Close")
+			t.Fatal("timeout exceeded while waiting for serv Close")
 		}
 	})
 
@@ -164,7 +174,7 @@ func TestTCPServer_Serve_HandleAcceptError(t *testing.T) {
 		case <-closed:
 			// test ok
 		case <-time.After(3 * time.Second):
-			t.Errorf("timeout exceeded while waiting for serv Close")
+			t.Fatal("timeout exceeded while waiting for serv Close")
 		}
 	})
 }
@@ -192,7 +202,7 @@ func TestTCPServer_DoubleServe(t *testing.T) {
 			t.Errorf("got nil, want an error")
 		}
 	case <-time.After(3 * time.Second):
-		t.Errorf("timeout exceeded while waiting for serv Close")
+		t.Fatal("timeout exceeded while waiting for serv Close")
 	}
 }
 
@@ -231,7 +241,7 @@ func TestTCPServer_DoubleClose(t *testing.T) {
 	case <-done:
 		return
 	case <-time.After(3 * time.Second):
-		t.Errorf("timeout exceeded while waiting for serv Close")
+		t.Fatal("timeout exceeded while waiting for serv Close")
 	}
 }
 
@@ -265,7 +275,61 @@ func TestTCPServer_Serve_WithOptions(t *testing.T) {
 			}
 			// ok
 		case <-time.After(1 * time.Second):
-			t.Errorf("timeout exceeded while waiting for serv Close")
+			t.Fatal("timeout exceeded while waiting for serv Close")
+		}
+	})
+}
+
+func TestTCPServer_Stats(t *testing.T) {
+	t.Parallel()
+
+	t.Run("NumConnections", func(t *testing.T) {
+		ln := mustTCPListen(t)
+		s := new(TCPServer)
+		defer s.Close()
+
+		var serveIn, serveOut sync.WaitGroup
+		gate := make(chan struct{})
+
+		go s.Serve(ln, func(conn net.Conn) {
+			serveIn.Done()
+			<-gate
+			conn.Close()
+			serveOut.Done()
+		})
+
+		const n = 10
+		serveIn.Add(n)
+		serveOut.Add(n)
+		for i := 0; i < n; i++ {
+			go func() {
+				conn := mustTCPDial(t, ln.Addr())
+				<-gate
+				conn.Close()
+			}()
+		}
+
+		testDone := make(chan struct{})
+		go func() {
+			defer close(testDone)
+			serveIn.Wait()
+
+			if g, w := s.Stats().NumConnections, n; g != w {
+				t.Errorf("NumConnections got %v, want %v", g, w)
+			}
+
+			close(gate)
+			serveOut.Wait()
+		}()
+
+		select {
+		case <-testDone:
+			break
+		case <-time.After(3 * time.Second):
+			t.Fatal("timeout exceeded while waiting for serv Close")
+		}
+		if g, w := s.Stats().NumConnections, 0; g != w {
+			t.Errorf("NumConnections got %v, want %v", g, w)
 		}
 	})
 }

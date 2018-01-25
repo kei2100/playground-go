@@ -69,6 +69,10 @@ func WithConnOptions(o TCPConnOptions) TCPServerOptions {
 
 type TCPHandleFunc func(net.Conn)
 
+type TCPServerStats struct {
+	NumConnections int
+}
+
 // TODO shutdown
 // TODO error msg
 
@@ -80,6 +84,8 @@ type TCPServer struct {
 	ln net.Listener
 
 	connOpts TCPConnOptions
+
+	connTracker tcpConnTracker
 }
 
 func (s *TCPServer) Serve(ln net.Listener, handler TCPHandleFunc, opts ...TCPServerOptions) error {
@@ -113,7 +119,7 @@ func (s *TCPServer) Serve(ln net.Listener, handler TCPHandleFunc, opts ...TCPSer
 		}
 		tempDelay = 0
 
-		c := newTCPServeConn(s, conn)
+		c := s.trackConn(conn)
 		c.setOptions(s.connOpts)
 		go handler(c)
 	}
@@ -125,6 +131,12 @@ func (s *TCPServer) Close() error {
 
 func (s *TCPServer) Shutdown(ctx context.Context) error {
 	return nil
+}
+
+func (s *TCPServer) Stats() TCPServerStats {
+	return TCPServerStats{
+		NumConnections: s.connTracker.count(),
+	}
 }
 
 func (s *TCPServer) setOptions(opts ...TCPServerOptions) {
@@ -168,13 +180,45 @@ func (s *TCPServer) withLockDo(f func() error) error {
 	return f()
 }
 
+func (s *TCPServer) trackConn(conn net.Conn) *tcpServerConn {
+	c := &tcpServerConn{s: s, Conn: conn}
+	s.connTracker.add(c)
+	return c
+}
+
+func (s *TCPServer) untrackConn(conn *tcpServerConn) {
+	s.connTracker.remove(conn)
+}
+
+type tcpConnTracker struct {
+	mu    sync.Mutex
+	conns map[*tcpServerConn]struct{}
+}
+
+func (t *tcpConnTracker) add(conn *tcpServerConn) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.conns == nil {
+		t.conns = make(map[*tcpServerConn]struct{})
+	}
+	t.conns[conn] = struct{}{}
+}
+
+func (t *tcpConnTracker) remove(conn *tcpServerConn) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	delete(t.conns, conn)
+}
+
+func (t *tcpConnTracker) count() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.conns)
+}
+
 type tcpServerConn struct {
 	s *TCPServer
 	net.Conn
-}
-
-func newTCPServeConn(s *TCPServer, conn net.Conn) *tcpServerConn {
-	return &tcpServerConn{s: s, Conn: conn}
 }
 
 type TCPConnOptions struct {
@@ -203,4 +247,9 @@ func (c *tcpServerConn) setOptions(o TCPConnOptions) {
 	if t := o.WriteTimeout; t > 0 {
 		c.Conn.SetWriteDeadline(time.Now().Add(t))
 	}
+}
+
+func (c *tcpServerConn) Close() error {
+	c.s.untrackConn(c)
+	return c.Conn.Close()
 }
