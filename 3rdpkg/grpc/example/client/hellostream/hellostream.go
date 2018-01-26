@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 
-	pb "github.com/kei2100/playground-go/3rdpkg/grpc/hello"
+	pb "github.com/kei2100/playground-go/3rdpkg/grpc/example/hello"
 
 	"io"
 
-	"github.com/kei2100/playground-go/3rdpkg/grpc/client/internal"
+	"github.com/kei2100/playground-go/3rdpkg/grpc/example/client/internal"
 	"golang.org/x/net/context"
 )
 

@@ -4,7 +4,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/golang/protobuf"
-  packages = ["proto","protoc-gen-go/descriptor","ptypes/any"]
+  packages = ["proto","protoc-gen-go/descriptor","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
   revision = "0a4f71a498b7c4812f64969510bcb4eca251e33a"
 
 [[projects]]
@@ -16,7 +16,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
-  packages = ["internal/gen","internal/triegen","internal/ucd","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
+  packages = ["internal/gen","internal/triegen","internal/ucd","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable","width"]
   revision = "cfdf022e86b4ecfb646e1efbd7db175dd623a8fa"
 
 [[projects]]
@@ -27,13 +27,13 @@
 
 [[projects]]
   name = "google.golang.org/grpc"
-  packages = [".","codes","credentials","grpclb/grpc_lb_v1","grpclog","internal","keepalive","metadata","naming","peer","reflection","reflection/grpc_reflection_v1alpha","stats","status","tap","transport"]
-  revision = "b15215fb911b24a5d61d57feec4233d610530464"
-  version = "v1.4.2"
+  packages = [".","balancer","balancer/base","balancer/roundrobin","codes","connectivity","credentials","encoding","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","reflection","reflection/grpc_reflection_v1alpha","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
+  revision = "6b51017f791ae1cfbec89c52efdf444b13b550ef"
+  version = "v1.9.2"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "844a5ea8e6e0e91d44d7c87ee35075a47adb39abf4eb4b5b159e6314220fad2e"
+  inputs-digest = "59ca02c02d251ef0d02c31af6dd6f5eb5d9ec6056889a42bc243725a4ea7be08"
   solver-name = "gps-cdcl"
   solver-version = 1
