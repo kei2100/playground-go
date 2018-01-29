@@ -87,7 +87,7 @@ func toUpper(ctx context.Context, in <-chan string) <-chan string {
 
 		for s := range in {
 			select {
-			case out <- width.Narrow.String(s):
+			case out <- strings.ToUpper(s):
 			case <-ctx.Done():
 				if err := ctx.Err(); err != nil {
 					log.Printf("toUpper: context was canceled or deadline exceeded: %v", err)
