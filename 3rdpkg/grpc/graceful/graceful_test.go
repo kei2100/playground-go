@@ -2,12 +2,10 @@ package graceful
 
 import (
 	"net"
-	"testing"
-
 	"sync"
+	"testing"
 	"time"
 
-	"github.com/kei2100/playground-go/util/wait"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -27,7 +25,7 @@ func (s *stubServer) EmptyCall(context.Context, *testpb.Empty) (*testpb.Empty, e
 	return new(testpb.Empty), nil
 }
 
-func TestTest(t *testing.T) {
+func TestGracefulStopBehavior(t *testing.T) {
 	s := grpc.NewServer()
 	ss := &stubServer{emptyCalled: make(chan struct{}, 2), resumeEmptyCall: make(chan struct{})}
 	testpb.RegisterTestServiceServer(s, ss)
@@ -37,7 +35,7 @@ func TestTest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	println(ln.Addr().String())
+	println(ln.Addr().String()) // for check tcp connections
 	go s.Serve(ln)
 
 	cc, err := grpc.Dial(ln.Addr().String(), grpc.WithInsecure())
@@ -50,47 +48,57 @@ func TestTest(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
+	// GracefulStopする前のRPCコール
 	go func() {
 		defer wg.Done()
-		// GracefulStopする前のRPCコールは最後まで実行されること
 		if _, err := c.EmptyCall(context.Background(), new(testpb.Empty)); err != nil {
+			// resumeEmptyCallした後は、エラー無しでレスポンスされること
 			t.Errorf("got err %v, want no error", err)
 		}
 	}()
-	if err := wait.ReceiveStruct(ss.emptyCalled, 100*time.Millisecond); err != nil {
-		t.Fatal(err)
+	select {
+	case <-ss.emptyCalled:
+		// ok
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timeout exceeded while waiting for receive emptyCalled")
 	}
 
-	// GracefulStop前は例えばこんな状態
+	// ブレークポイントで止めると、GracefulStop前は例えばこんな状態
 	//
 	// tcp4       0      0  127.0.0.1.51174        127.0.0.1.51175        ESTABLISHED
 	// tcp4       0      0  127.0.0.1.51175        127.0.0.1.51174        ESTABLISHED
 	// tcp4       0      0  127.0.0.1.51174        *.*                    LISTEN
-	go s.GracefulStop()
+	gracefulDone := make(chan struct{})
+	go func() {
+		// GracefulStopするとlistenerがクローズされる。
+		// 保留中のRPCコールが完了するまでこのメソッドはブロックする。
+		s.GracefulStop()
+		close(gracefulDone)
+	}()
 
 	// GracefulStop後はLISTENが止まる
 	//
 	// tcp4       0      0  127.0.0.1.51174        127.0.0.1.51175        ESTABLISHED
 	// tcp4       0      0  127.0.0.1.51175        127.0.0.1.51174        ESTABLISHED
-	time.Sleep(10 * time.Millisecond)
-
+	time.Sleep(10 * time.Millisecond) // GracefulStopのgoroutineが進捗してリスンが停止する挙動を見やすいようにsleep
 	close(ss.resumeEmptyCall)
 
-	// 保留していたRPCコールが完了してもFINやRSTでコネクションクローズするわけではない。
-	// 新規の接続や、RPCコールはエラーになる。
-	//
-	// tcp4       0      0  127.0.0.1.51174        127.0.0.1.51175        ESTABLISHED
-	// tcp4       0      0  127.0.0.1.51175        127.0.0.1.51174        ESTABLISHED
+	select {
+	case <-gracefulDone:
+		// ok
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timeout exceeded while waiting for graceful stop")
+	}
 
+	// 保留していたRPCコールが完了して、GracefulStopが完了したら、既存のコネクションはクローズされる
+
+	// GracefulStop後のRPCコールはエラーになること
 	go func() {
 		defer wg.Done()
-		// GracefulStop後のRPCコールはエラーになること
 		if _, err := c.EmptyCall(context.Background(), new(testpb.Empty)); err == nil {
 			t.Error("got nil, want an error")
 		}
 	}()
 
-	if err := wait.WGroup(&wg, 100*time.Millisecond); err != nil {
-		t.Fatal(err)
-	}
+	wg.Wait()
 }
