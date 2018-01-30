@@ -15,7 +15,7 @@ func assertDone(t *testing.T, c context.Context, wanterr error) {
 		if g, w := c.Err(), wanterr; g != w {
 			t.Errorf("Err got %v, want %v", g, w)
 		}
-	default:
+	case <-time.After(10 * time.Millisecond):
 		t.Error("Done channel got not received, want received")
 	}
 }
@@ -26,7 +26,7 @@ func assertNotDone(t *testing.T, c context.Context) {
 	select {
 	case <-c.Done():
 		t.Error("Done channel got received, want not received")
-	default:
+	case <-time.After(10 * time.Millisecond):
 		// ok
 	}
 }

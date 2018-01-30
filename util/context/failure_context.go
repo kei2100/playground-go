@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+type FailureContext interface {
+	context.Context
+	// Fail terminates this context with an error.
+	// if Fail is called multiple times, only the first call will set the error
+	Fail(err error)
+}
+
 // failureContext is an implementation of context.Context, which can be terminated with any error.
 type failureContext struct {
 	p context.Context
@@ -23,7 +30,7 @@ type failureContext struct {
 //
 // Canceling this context releases resources associated with it, so code should
 // call cancel as soon as the operations running in this Context complete.
-func Failure(p context.Context) (*failureContext, context.CancelFunc) {
+func Failure(p context.Context) (FailureContext, context.CancelFunc) {
 	c := &failureContext{
 		p:    p,
 		done: make(chan struct{}),
@@ -46,8 +53,6 @@ func Failure(p context.Context) (*failureContext, context.CancelFunc) {
 	return c, can
 }
 
-// Fail terminates this context with an error.
-// if Fail is called multiple times, only the first call will set the error
 func (c *failureContext) Fail(err error) {
 	c.once.Do(func() {
 		c.err = err
