@@ -1,34 +1,46 @@
 package pipeline
 
 import (
-	"context"
+	gocontext "context"
 	"fmt"
 	"log"
 	"strings"
 	"testing"
-	"time"
+	"unicode"
 
+	"github.com/kei2100/playground-go/util/context"
 	"golang.org/x/text/width"
 )
 
 func TestPipeline(t *testing.T) {
-	ctx, can := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, can := context.Failure(gocontext.Background())
 	defer can()
 
 	c := gen(ctx, "ｈｅｌｌｏ", "ｗｏｒｌｄ", "ｇｏｌａｎｇ")
+	//c := gen(ctx, "ｈｅｌｌｏ", "ｗｏｒｌｄ", "ｇｏｌａｎｇ", string(unicode.ReplacementChar))	// error pattern
 	rs := toUpper(ctx, toNarrow(ctx, c))
 
-	var strs []string
-	for r := range rs {
-		strs = append(strs, r)
-		// このsleepを付けるとctxがタイムアウトする
-		//time.Sleep(110 * time.Millisecond)
+	var ss []string
+
+loop:
+	for {
+		select {
+		case s, ok := <-rs:
+			if !ok {
+				break loop
+			}
+			ss = append(ss, s)
+		case <-ctx.Done():
+			fmt.Printf("pipeline failed: %v\n", ctx.Err())
+			return
+		}
 	}
-	fmt.Println(strings.Join(strs, " "))
+
+	fmt.Println(strings.Join(ss, " "))
 }
 
 // generate pipeline
-func gen(ctx context.Context, strs ...string) <-chan string {
+func gen(ctx gocontext.Context, strs ...string) <-chan string {
 	out := make(chan string)
 
 	go func() {
@@ -40,10 +52,8 @@ func gen(ctx context.Context, strs ...string) <-chan string {
 		for _, s := range strs {
 			select {
 			case out <- s:
+				continue
 			case <-ctx.Done():
-				if err := ctx.Err(); err != nil {
-					log.Printf("gen: context was canceled or deadline exceeded: %v", err)
-				}
 				return
 			}
 		}
@@ -52,7 +62,7 @@ func gen(ctx context.Context, strs ...string) <-chan string {
 	return out
 }
 
-func toNarrow(ctx context.Context, in <-chan string) <-chan string {
+func toNarrow(ctx context.FailureContext, in <-chan string) <-chan string {
 	out := make(chan string)
 
 	go func() {
@@ -64,10 +74,8 @@ func toNarrow(ctx context.Context, in <-chan string) <-chan string {
 		for s := range in {
 			select {
 			case out <- width.Narrow.String(s):
+				continue
 			case <-ctx.Done():
-				if err := ctx.Err(); err != nil {
-					log.Printf("toNarrow: context was canceled or deadline exceeded: %v", err)
-				}
 				return
 			}
 		}
@@ -76,7 +84,7 @@ func toNarrow(ctx context.Context, in <-chan string) <-chan string {
 	return out
 }
 
-func toUpper(ctx context.Context, in <-chan string) <-chan string {
+func toUpper(ctx context.FailureContext, in <-chan string) <-chan string {
 	out := make(chan string)
 
 	go func() {
@@ -86,12 +94,15 @@ func toUpper(ctx context.Context, in <-chan string) <-chan string {
 		}()
 
 		for s := range in {
+			s := strings.ToUpper(s)
+			if strings.ContainsRune(s, unicode.ReplacementChar) {
+				ctx.Fail(fmt.Errorf("invalid code points contains: %v", s))
+				return
+			}
 			select {
-			case out <- strings.ToUpper(s):
+			case out <- s:
+				continue
 			case <-ctx.Done():
-				if err := ctx.Err(); err != nil {
-					log.Printf("toUpper: context was canceled or deadline exceeded: %v", err)
-				}
 				return
 			}
 		}
