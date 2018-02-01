@@ -11,8 +11,8 @@ type OnceOrError struct {
 	done uint32
 }
 
-// Do is similar to sync.Once.Do, but perform the action until it succeeds
-func (o *OnceOrError) Do(f func() error) error {
+// DoOrError is similar to sync.Once.Do, but perform the action until it succeeds
+func (o *OnceOrError) DoOrError(f func() error) error {
 	if atomic.LoadUint32(&o.done) == 1 {
 		return nil
 	}

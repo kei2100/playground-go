@@ -15,7 +15,7 @@ func TestOnceOrError(t *testing.T) {
 
 	f := func(raiseErr bool) {
 		defer wg.Done()
-		once.Do(func() error {
+		once.DoOrError(func() error {
 			if raiseErr {
 				atomic.AddInt32(&errCount, 1)
 				return errors.New("")
