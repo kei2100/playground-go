@@ -10,30 +10,6 @@ import (
 	"time"
 )
 
-func mustTCPListen(t *testing.T) net.Listener {
-	t.Helper()
-
-	ln, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	return ln
-}
-
-func mustTCPDial(t *testing.T, addr net.Addr) net.Conn {
-	t.Helper()
-
-	conn, err := net.Dial("tcp", addr.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	return conn
-}
-
-var nopTCPHandler = func(conn net.Conn) {
-	conn.Close()
-}
-
 func TestTCPServer_ServeClose(t *testing.T) {
 	t.Parallel()
 
@@ -85,6 +61,26 @@ func TestTCPServer_ServeClose(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("timeout exceeded while waiting for serv Close")
 	}
+}
+
+func TestTCPServer_Close(t *testing.T) {
+	t.Parallel()
+
+	ln := mustTCPListen(t)
+	s := new(TCPServer)
+	go s.Serve(ln, func(conn net.Conn) {})
+
+	conn := mustTCPDial(t, ln.Addr())
+	defer conn.Close()
+	assertNumConnections(t, s, 1)
+
+	if err := s.Close(); err != nil {
+		t.Error(err)
+	}
+	if _, err := net.Dial("tcp", ln.Addr().String()); err == nil {
+		t.Errorf("dial got no error, want an error")
+	}
+	assertNumConnections(t, s, 0)
 }
 
 // implements net.Listener. Accept() always return err
@@ -326,4 +322,57 @@ func TestTCPServer_Stats(t *testing.T) {
 			t.Errorf("NumConnections got %v, want %v", g, w)
 		}
 	})
+}
+
+func mustTCPListen(t *testing.T) net.Listener {
+	t.Helper()
+
+	ln, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ln
+}
+
+func mustTCPDial(t *testing.T, addr net.Addr) net.Conn {
+	t.Helper()
+
+	conn, err := net.Dial("tcp", addr.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
+var nopTCPHandler = func(conn net.Conn) {
+	conn.Close()
+}
+
+func assertNumConnections(t *testing.T, s *TCPServer, want int) {
+	t.Helper()
+
+	tick := time.NewTicker(1 * time.Millisecond)
+	defer tick.Stop()
+
+	const numTrials = 10
+	const okThresould = 5
+	var okCount int
+
+	results := make([]int, 0, numTrials)
+
+	for i := 0; i < numTrials; i++ {
+		<-tick.C
+		got := s.connTracker.count()
+		results = append(results, got)
+		if got == want {
+			okCount++
+		} else {
+			okCount = 0
+		}
+		if okCount >= okThresould {
+			return
+		}
+	}
+
+	t.Errorf("server num connections got %v, want %v appears more than %v times consecutively", results, want, okThresould)
 }

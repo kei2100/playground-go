@@ -126,7 +126,11 @@ func (s *TCPServer) Serve(ln net.Listener, handler TCPHandleFunc, opts ...TCPSer
 }
 
 func (s *TCPServer) Close() error {
-	return s.closeListener()
+	err := s.closeListener()
+	for _, conn := range s.connTracker.all() {
+		conn.Close()
+	}
+	return err
 }
 
 func (s *TCPServer) Shutdown(ctx context.Context) error {
@@ -208,6 +212,18 @@ func (t *tcpConnTracker) remove(conn *tcpServerConn) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	delete(t.conns, conn)
+}
+
+func (t *tcpConnTracker) all() []*tcpServerConn {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	ret := make([]*tcpServerConn, len(t.conns))
+	var i int
+	for k := range t.conns {
+		ret[i] = k
+		i++
+	}
+	return ret
 }
 
 func (t *tcpConnTracker) count() int {
