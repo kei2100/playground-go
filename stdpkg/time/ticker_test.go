@@ -8,6 +8,7 @@ import (
 
 func TestTicker(t *testing.T) {
 	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
 	cnt := 0
 	for {
 		select {
