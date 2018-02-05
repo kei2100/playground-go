@@ -15,6 +15,7 @@ func main() {
 	if err := agent.Listen(&agent.Options{}); err != nil {
 		log.Fatal(err)
 	}
+	defer agent.Close()
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		log.Fatal(err)
