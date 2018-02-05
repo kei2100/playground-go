@@ -1,39 +1,16 @@
 package serv
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 var ErrServerClosed = errors.New("serv: server closed")
-
-const (
-	stateClosed = iota
-	stateListening
-)
-
-type servState int32
-
-func (st *servState) IsListening() bool {
-	return *st == stateListening
-}
-
-func (st *servState) setListening() {
-	*st = stateListening
-}
-
-func (st *servState) IsClosed() bool {
-	return *st == stateClosed
-}
-
-func (st *servState) setClosed() {
-	*st = stateClosed
-}
 
 type TCPServerOptions func(*TCPServer)
 
@@ -78,13 +55,10 @@ type TCPServerStats struct {
 
 // base on http stdpkg
 type TCPServer struct {
-	mu sync.Mutex
-
-	servState
-	ln net.Listener
-
-	connOpts TCPConnOptions
-
+	mu          sync.Mutex
+	state       atomic.Value
+	ln          net.Listener
+	connOpts    TCPConnOptions
 	connTracker tcpConnTracker
 }
 
@@ -126,25 +100,27 @@ func (s *TCPServer) Serve(ln net.Listener, handler TCPHandleFunc, opts ...TCPSer
 }
 
 func (s *TCPServer) Close() error {
-	err := s.closeListener()
+	err := s.CloseListener()
 	for _, conn := range s.connTracker.all() {
 		conn.Close()
 	}
 	return err
 }
 
-func (s *TCPServer) Shutdown(ctx context.Context) error {
-	return nil
-}
-
-func (s *TCPServer) Stats() TCPServerStats {
-	return TCPServerStats{
-		NumConnections: s.connTracker.count(),
-	}
+func (s *TCPServer) CloseListener() error {
+	return s.withLockDo(func() error {
+		if s.IsClosed() {
+			return nil
+		}
+		err := s.ln.Close()
+		s.ln = nil
+		s.state.Store(stateClosed)
+		return err
+	})
 }
 
 func (s *TCPServer) setOptions(opts ...TCPServerOptions) {
-	s.withLockDo(func() error {
+	_ = s.withLockDo(func() error {
 		s.connOpts = defaultTCPConnOptions()
 		for _, o := range opts {
 			o(s)
@@ -153,28 +129,50 @@ func (s *TCPServer) setOptions(opts ...TCPServerOptions) {
 	})
 }
 
+const (
+	stateClosed = iota
+	stateListening
+)
+
+func (s *TCPServer) IsListening() bool {
+	switch ss := s.state.Load().(type) {
+	case int:
+		return ss == stateListening
+	case nil:
+		// The state has not been set yet(= not listening)
+		return false
+	default:
+		panic(fmt.Errorf("serv: invalid TCPServer.state type: %T", ss))
+	}
+}
+
+func (s *TCPServer) IsClosed() bool {
+	switch ss := s.state.Load().(type) {
+	case int:
+		return ss == stateClosed
+	case nil:
+		// The state has not been set yet(= closed)
+		return true
+	default:
+		panic(fmt.Errorf("serv: invalid TCPServer.state type: %T", ss))
+	}
+}
+
 func (s *TCPServer) setListener(ln net.Listener) error {
 	return s.withLockDo(func() error {
 		if s.IsListening() {
 			return fmt.Errorf("serv: already listening")
 		}
 		s.ln = ln
-		s.setListening()
+		s.state.Store(stateListening)
 		return nil
 	})
 }
 
-func (s *TCPServer) closeListener() error {
-	return s.withLockDo(func() error {
-		if s.IsClosed() {
-			return nil
-		}
-		err := s.ln.Close()
-		s.ln = nil
-		s.setClosed()
-
-		return err
-	})
+func (s *TCPServer) Stats() TCPServerStats {
+	return TCPServerStats{
+		NumConnections: s.connTracker.count(),
+	}
 }
 
 func (s *TCPServer) withLockDo(f func() error) error {
