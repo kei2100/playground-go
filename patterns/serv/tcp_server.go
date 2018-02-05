@@ -50,9 +50,6 @@ type TCPServerStats struct {
 	NumConnections int
 }
 
-// TODO shutdown
-// TODO error msg
-
 // base on http stdpkg
 type TCPServer struct {
 	mu          sync.Mutex
@@ -115,12 +112,15 @@ func (s *TCPServer) CloseListener() error {
 		err := s.ln.Close()
 		s.ln = nil
 		s.state.Store(stateClosed)
-		return err
+		if err != nil {
+			return fmt.Errorf("serv: an error occurred when closing the listener: %v", err)
+		}
+		return nil
 	})
 }
 
 func (s *TCPServer) setOptions(opts ...TCPServerOptions) {
-	_ = s.withLockDo(func() error {
+	s.withLockDo(func() error {
 		s.connOpts = defaultTCPConnOptions()
 		for _, o := range opts {
 			o(s)
@@ -161,7 +161,7 @@ func (s *TCPServer) IsClosed() bool {
 func (s *TCPServer) setListener(ln net.Listener) error {
 	return s.withLockDo(func() error {
 		if s.IsListening() {
-			return fmt.Errorf("serv: already listening")
+			return fmt.Errorf("serv: already serving")
 		}
 		s.ln = ln
 		s.state.Store(stateListening)
