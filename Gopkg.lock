@@ -8,6 +8,18 @@
   revision = "0a4f71a498b7c4812f64969510bcb4eca251e33a"
 
 [[projects]]
+  name = "github.com/google/gops"
+  packages = ["agent","internal","signal"]
+  revision = "57e77c5c37da1f4e1af49f9d1fe760f146c1579e"
+  version = "v0.3.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kardianos/osext"
+  packages = ["."]
+  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
@@ -27,13 +39,13 @@
 
 [[projects]]
   name = "google.golang.org/grpc"
-  packages = [".","balancer","balancer/base","balancer/roundrobin","codes","connectivity","credentials","encoding","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","reflection","reflection/grpc_reflection_v1alpha","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
+  packages = [".","balancer","balancer/base","balancer/roundrobin","codes","connectivity","credentials","encoding","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","reflection","reflection/grpc_reflection_v1alpha","resolver","resolver/dns","resolver/passthrough","stats","status","tap","test/grpc_testing","transport"]
   revision = "6b51017f791ae1cfbec89c52efdf444b13b550ef"
   version = "v1.9.2"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "59ca02c02d251ef0d02c31af6dd6f5eb5d9ec6056889a42bc243725a4ea7be08"
+  inputs-digest = "87db8b8d1e58f1f9ce21a7cc48911bc8569e02c832c1fa9f9d32110dbd2f0fab"
   solver-name = "gps-cdcl"
   solver-version = 1
