@@ -5,12 +5,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 )
 
 type multicastUnixTimeServer struct {
+	mu      sync.Mutex
 	stopSig chan struct{}
 	done    chan struct{}
 }
@@ -22,7 +24,9 @@ func (s *multicastUnixTimeServer) serve() error {
 	}
 	defer conn.Close()
 
+	s.mu.Lock()
 	s.stopSig, s.done = make(chan struct{}), make(chan struct{})
+	s.mu.Unlock()
 	b := make([]byte, 8)
 
 	tick := time.NewTicker(1 * time.Second)
@@ -44,7 +48,9 @@ func (s *multicastUnixTimeServer) serve() error {
 }
 
 func (s *multicastUnixTimeServer) stop() {
+	s.mu.Lock()
 	close(s.stopSig)
+	s.mu.Unlock()
 	<-s.done
 }
 
@@ -106,6 +112,8 @@ func (c *multicastClient) stop() {
 }
 
 func TestUDPMulticast(t *testing.T) {
+	t.Parallel()
+
 	srv := &multicastUnixTimeServer{}
 	go func() {
 		fmt.Println(srv.serve())
@@ -149,7 +157,7 @@ func TestUDPMulticast(t *testing.T) {
 		case <-ctx.Done():
 			t.Fatal("timeout exceeded")
 		default:
-			if cnt > 5 {
+			if atomic.LoadInt32(&cnt) > 5 {
 				return
 			}
 		}

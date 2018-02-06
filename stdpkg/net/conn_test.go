@@ -101,6 +101,8 @@ func TestConnSetDeadline(t *testing.T) {
 }
 
 func TestConnSetKeepalive(t *testing.T) {
+	t.Skip("終了させないテストなので自動テストではスキップ。手動実行したいときにSkipはずす。")
+
 	kaln := listenTCP(t)
 	nokaln := listenTCP(t)
 

@@ -7,6 +7,8 @@ import (
 
 	"testing"
 
+	"net/http/httptest"
+
 	"github.com/kei2100/playground-go/util/ioutil"
 )
 
@@ -25,11 +27,16 @@ func TestHttpClient(t *testing.T) {
 	//
 	// conf := &tls.Config{InsecureSkipVerify: true}
 
+	sv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	}))
+	defer sv.Close()
+
 	conf := &tls.Config{}
 	tran := &http.Transport{TLSClientConfig: conf}
 	client := &http.Client{Transport: tran}
 
-	res, err := client.Get("https://google.co.jp/robots.txt")
+	res, err := client.Get(sv.URL)
 	if err != nil {
 		log.Fatal(err)
 	}
