@@ -1,13 +1,13 @@
 package pipeline
 
 import (
-	"testing"
-	"unicode/utf8"
-	"sync"
-	"fmt"
-	"time"
 	"context"
+	"fmt"
 	"log"
+	"sync"
+	"testing"
+	"time"
+	"unicode/utf8"
 )
 
 func TestFanOutFanIn(t *testing.T) {
@@ -15,7 +15,7 @@ func TestFanOutFanIn(t *testing.T) {
 
 	// Fan-in: 複数のchannelを一つに束ねて、全てのchannelがcloseされるまで、束ねた一つのchannelから読み込みを行うパターン
 
-	ctx, can := context.WithTimeout(context.Background(), 100 * time.Millisecond)
+	ctx, can := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer can()
 
 	in := gen(ctx, "fan-out", "fan-in", "test")
@@ -62,7 +62,7 @@ func wordCount(ctx context.Context, in <-chan string) <-chan int {
 	return out
 }
 
-func mergeChannels(ctx context.Context, channels ...<-chan int) <-chan int{
+func mergeChannels(ctx context.Context, channels ...<-chan int) <-chan int {
 	out := make(chan int)
 	wg := new(sync.WaitGroup)
 

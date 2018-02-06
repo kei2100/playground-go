@@ -29,7 +29,6 @@ func BenchmarkMethodCall(b *testing.B) {
 	pr := &pointerReceiver{n: 1}
 	ipr := pointerReceiver{n: 1}
 
-
 	b.Run("value receiver", func(b *testing.B) {
 		i, v := 0, 0
 		for ; i < b.N; i++ {

@@ -1,8 +1,8 @@
 package channel
 
 import (
-	"sync"
 	"fmt"
+	"sync"
 )
 
 func ExampleUnidirectionalChannel() {

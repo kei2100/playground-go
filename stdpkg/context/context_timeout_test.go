@@ -50,7 +50,7 @@ func TestContextWithTimeout(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.subject, func(t *testing.T) {
-			task := &SomeTask{Wait:tt.taskWait}
+			task := &SomeTask{Wait: tt.taskWait}
 			ctx, can := context.WithTimeout(context.Background(), tt.timeout)
 			defer can()
 			err := task.Do(ctx)
