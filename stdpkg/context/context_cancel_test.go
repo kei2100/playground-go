@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func assertDoneWithCanceled(t *testing.T, c context.Context) {
+func assertDoneWithCanceled(c context.Context, t *testing.T) {
 	t.Helper()
 
 	select {
@@ -18,7 +18,7 @@ func assertDoneWithCanceled(t *testing.T, c context.Context) {
 	}
 }
 
-func assertNotDone(t *testing.T, c context.Context) {
+func assertNotDone(c context.Context, t *testing.T) {
 	t.Helper()
 
 	select {
@@ -34,9 +34,9 @@ func TestContextWithCancel(t *testing.T) {
 		c, can := context.WithCancel(context.Background())
 
 		can()
-		assertDoneWithCanceled(t, c)
+		assertDoneWithCanceled(c, t)
 		can()
-		assertDoneWithCanceled(t, c)
+		assertDoneWithCanceled(c, t)
 	})
 
 	t.Run("when parent canceled", func(t *testing.T) {
@@ -45,8 +45,8 @@ func TestContextWithCancel(t *testing.T) {
 		defer can()
 
 		pcan()
-		assertDoneWithCanceled(t, p)
-		assertDoneWithCanceled(t, c)
+		assertDoneWithCanceled(p, t)
+		assertDoneWithCanceled(c, t)
 	})
 
 	t.Run("when child canceled", func(t *testing.T) {
@@ -55,7 +55,7 @@ func TestContextWithCancel(t *testing.T) {
 		defer pcan()
 
 		can()
-		assertNotDone(t, p)
-		assertDoneWithCanceled(t, c)
+		assertNotDone(p, t)
+		assertDoneWithCanceled(c, t)
 	})
 }

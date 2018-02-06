@@ -12,7 +12,7 @@ type RouteFunc func(conn net.Conn)
 // ConnOption is the functional option for accepted connection
 type ConnOption func(conn *net.TCPConn)
 
-// WittKeepAlive option
+// WithKeepAlive option
 func WithKeepAlive(keepalive bool) ConnOption {
 	return func(conn *net.TCPConn) {
 		conn.SetKeepAlive(keepalive)

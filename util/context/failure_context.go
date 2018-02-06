@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// FailureContext is an context interface, than can terminates with an error
 type FailureContext interface {
 	context.Context
 	// Fail terminates this context with an error.

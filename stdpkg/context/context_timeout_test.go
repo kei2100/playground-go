@@ -14,7 +14,7 @@ type SomeTask struct {
 
 // Do something with context
 func (t *SomeTask) Do(ctx context.Context) error {
-	var success error = nil
+	var success error
 	defer t.free()
 
 	select {

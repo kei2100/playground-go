@@ -35,7 +35,7 @@ type dialOptions struct {
 // DialOption is the functional option for dial
 type DialOption func(o *dialOptions)
 
-// WithPlainText option
+// WithNoTLS option
 func WithNoTLS() DialOption {
 	return func(o *dialOptions) {
 		o.noTLS = true

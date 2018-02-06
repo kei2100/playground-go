@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func assertDone(t *testing.T, c context.Context, wanterr error) {
+func assertDone(c context.Context, t *testing.T, wanterr error) {
 	t.Helper()
 
 	select {
@@ -20,7 +20,7 @@ func assertDone(t *testing.T, c context.Context, wanterr error) {
 	}
 }
 
-func assertNotDone(t *testing.T, c context.Context) {
+func assertNotDone(c context.Context, t *testing.T) {
 	t.Helper()
 
 	select {
@@ -34,17 +34,17 @@ func assertNotDone(t *testing.T, c context.Context) {
 func TestFailureContext_Cancel(t *testing.T) {
 	t.Run("call cancel", func(t *testing.T) {
 		c, can := Failure(context.Background())
-		assertNotDone(t, c)
+		assertNotDone(c, t)
 		can()
-		assertDone(t, c, context.Canceled)
+		assertDone(c, t, context.Canceled)
 	})
 
 	t.Run("duplicate call cancel", func(t *testing.T) {
 		c, can := Failure(context.Background())
 		can()
-		assertDone(t, c, context.Canceled)
+		assertDone(c, t, context.Canceled)
 		can()
-		assertDone(t, c, context.Canceled)
+		assertDone(c, t, context.Canceled)
 	})
 }
 
@@ -55,7 +55,7 @@ func TestFailureContext_Fail(t *testing.T) {
 
 		wanterr := errors.New("want error")
 		c.Fail(wanterr)
-		assertDone(t, c, wanterr)
+		assertDone(c, t, wanterr)
 	})
 
 	t.Run("duplicate call Fail", func(t *testing.T) {
@@ -64,9 +64,9 @@ func TestFailureContext_Fail(t *testing.T) {
 
 		want := errors.New("want error")
 		c.Fail(want)
-		assertDone(t, c, want)
+		assertDone(c, t, want)
 		c.Fail(errors.New("unexpected"))
-		assertDone(t, c, want)
+		assertDone(c, t, want)
 	})
 }
 
@@ -76,8 +76,8 @@ func TestFailureContext_Propagation(t *testing.T) {
 		c, can := Failure(p)
 		defer can()
 		pcan()
-		assertDone(t, p, context.Canceled)
-		assertDone(t, c, context.Canceled)
+		assertDone(p, t, context.Canceled)
+		assertDone(c, t, context.Canceled)
 	})
 
 	t.Run("parent to child failure", func(t *testing.T) {
@@ -87,8 +87,8 @@ func TestFailureContext_Propagation(t *testing.T) {
 		defer can()
 
 		time.Sleep(10 * time.Millisecond)
-		assertDone(t, p, context.DeadlineExceeded)
-		assertDone(t, c, context.DeadlineExceeded)
+		assertDone(p, t, context.DeadlineExceeded)
+		assertDone(c, t, context.DeadlineExceeded)
 	})
 
 	t.Run("child to parent cancel", func(t *testing.T) {
@@ -96,8 +96,8 @@ func TestFailureContext_Propagation(t *testing.T) {
 		defer pcan()
 		c, can := Failure(p)
 		can()
-		assertNotDone(t, p)
-		assertDone(t, c, context.Canceled)
+		assertNotDone(p, t)
+		assertDone(c, t, context.Canceled)
 	})
 
 	t.Run("child to parent Fail", func(t *testing.T) {
@@ -108,7 +108,7 @@ func TestFailureContext_Propagation(t *testing.T) {
 
 		want := errors.New("want error")
 		c.Fail(want)
-		assertNotDone(t, p)
-		assertDone(t, c, want)
+		assertNotDone(p, t)
+		assertDone(c, t, want)
 	})
 }

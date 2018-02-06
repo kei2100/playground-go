@@ -134,7 +134,7 @@ func TestUDPMulticast(t *testing.T) {
 	}
 	defer c2.stop()
 
-	var cnt int32 = 0
+	var cnt int32
 	ctx, can := context.WithTimeout(context.Background(), 5*time.Second)
 	defer can()
 

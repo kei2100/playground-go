@@ -10,47 +10,58 @@ import (
 	"time"
 )
 
+// ErrServerClosed is returned by the TCPServer's Serve method
+// after a call to Close.
 var ErrServerClosed = errors.New("serv: server closed")
 
+// TCPServerOptions is option for TCPServer
 type TCPServerOptions func(*TCPServer)
 
+// WithKeepAlive set keepalive to incoming connection
 func WithKeepAlive(keepalive bool) TCPServerOptions {
 	return func(s *TCPServer) {
 		s.connOpts.KeepAlive = keepalive
 	}
 }
 
+// WithKeepAlivePeriod set keepalive period to incoming connection
 func WithKeepAlivePeriod(p time.Duration) TCPServerOptions {
 	return func(s *TCPServer) {
 		s.connOpts.KeepAlivePeriod = p
 	}
 }
 
+// WithReadTimeout set read timeout to incoming connection
 func WithReadTimeout(t time.Duration) TCPServerOptions {
 	return func(s *TCPServer) {
 		s.connOpts.ReadTimeout = t
 	}
 }
 
+// WithWriteTimeout set write timeout to incoming connection
 func WithWriteTimeout(t time.Duration) TCPServerOptions {
 	return func(s *TCPServer) {
 		s.connOpts.WriteTimeout = t
 	}
 }
 
+// WithConnOptions set TCPConnOptions to incoming connection
 func WithConnOptions(o TCPConnOptions) TCPServerOptions {
 	return func(s *TCPServer) {
 		s.connOpts = o
 	}
 }
 
+// TCPHandleFunc is type of handler
 type TCPHandleFunc func(net.Conn)
 
+// TCPServerStats is statistics of the TCPServer
 type TCPServerStats struct {
 	NumConnections int
 }
 
-// base on http stdpkg
+// A TCPServer defines parameters for running an TCP server.
+// The zero value for Server is a valid configuration.
 type TCPServer struct {
 	mu          sync.Mutex
 	state       atomic.Value
@@ -59,6 +70,8 @@ type TCPServer struct {
 	connTracker tcpConnTracker
 }
 
+// Serve accepts incoming TCP connections on the listener ln,
+// creating a new service goroutine for each. The service goroutines call handler to reply to them.
 func (s *TCPServer) Serve(ln net.Listener, handler TCPHandleFunc, opts ...TCPServerOptions) error {
 	s.setOptions(opts...)
 	if err := s.setListener(ln); err != nil {
@@ -96,6 +109,7 @@ func (s *TCPServer) Serve(ln net.Listener, handler TCPHandleFunc, opts ...TCPSer
 	}
 }
 
+// Close immediately closes the server listener and all pending connections
 func (s *TCPServer) Close() error {
 	err := s.CloseListener()
 	for _, conn := range s.connTracker.all() {
@@ -104,6 +118,7 @@ func (s *TCPServer) Close() error {
 	return err
 }
 
+// CloseListener closes the server listener. It stops accepting new connections
 func (s *TCPServer) CloseListener() error {
 	return s.withLockDo(func() error {
 		if s.IsClosed() {
@@ -134,6 +149,7 @@ const (
 	stateListening
 )
 
+// IsListening reports whether the server listener is listening
 func (s *TCPServer) IsListening() bool {
 	switch ss := s.state.Load().(type) {
 	case int:
@@ -146,6 +162,7 @@ func (s *TCPServer) IsListening() bool {
 	}
 }
 
+// IsClosed reports whether the server listener is closed
 func (s *TCPServer) IsClosed() bool {
 	switch ss := s.state.Load().(type) {
 	case int:
@@ -169,6 +186,7 @@ func (s *TCPServer) setListener(ln net.Listener) error {
 	})
 }
 
+// Stats return TCPServerStats
 func (s *TCPServer) Stats() TCPServerStats {
 	return TCPServerStats{
 		NumConnections: s.connTracker.count(),
@@ -235,6 +253,7 @@ type tcpServerConn struct {
 	net.Conn
 }
 
+// TCPConnOptions defines parameter for TCP connection
 type TCPConnOptions struct {
 	KeepAlive       bool
 	KeepAlivePeriod time.Duration
@@ -263,6 +282,8 @@ func (c *tcpServerConn) setOptions(o TCPConnOptions) {
 	}
 }
 
+// Close closes the connection and turn off server tracking.
+// Any blocked Read or Write operations will be unblocked and return errors.
 func (c *tcpServerConn) Close() error {
 	c.s.untrackConn(c)
 	return c.Conn.Close()
