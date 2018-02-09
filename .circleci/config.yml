@@ -12,7 +12,7 @@ jobs:
       - run: make vet lint
       - restore_cache:
           key: playground-go-{{ .Revision }}
-      - run: make vendor
+      - run: ls vendor/{{ .Revision }} > /dev/null 2>&1 || make vendor && touch vendor/{{ .Revision }}
       - save_cache:
           key: playground-go-{{ .Revision }}
           paths: vendor
