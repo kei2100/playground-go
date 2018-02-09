@@ -9,11 +9,11 @@ setup:
 	@which goimports > /dev/null 2>&1 || go get -u golang.org/x/tools/cmd/goimports
 	@which richgo > /dev/null 2>&1 || go get -u github.com/kyoh86/richgo
 
-vendor: setup vendor/timestamp
+vendor: setup vendor/.timestamp
 
-vendor/timestamp: $(shell find $(DIRS) -name '*.go')
+vendor/.timestamp: $(shell find $(DIRS) -name '*.go')
 	dep ensure -v
-	touch vendor/timestamp
+	touch vendor/.timestamp
 
 vet:
 	go vet $(PACKAGES)
