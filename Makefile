@@ -25,5 +25,5 @@ lint: setup
 fmt: setup
 	find $(DIRS) -name '*.go' | xargs goimports -w
 
-test: vendor
+test: setup vendor
 	go test -v -race $(PACKAGES) | richgo testfilter
