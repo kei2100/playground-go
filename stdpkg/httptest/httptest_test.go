@@ -17,6 +17,8 @@ func echo() func(http.ResponseWriter, *http.Request) {
 }
 
 func TestSimple(t *testing.T) {
+	t.Parallel()
+
 	sv := httptest.NewServer(http.HandlerFunc(echo()))
 	defer sv.Close()
 
