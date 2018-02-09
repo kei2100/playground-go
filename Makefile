@@ -9,7 +9,7 @@ setup:
 	@which goimports > /dev/null 2>&1 || go get -u golang.org/x/tools/cmd/goimports
 	@which richgo > /dev/null 2>&1 || go get -u github.com/kyoh86/richgo
 
-vendor: setup vendor/.timestamp
+vendor: vendor/.timestamp
 
 vendor/.timestamp: $(shell find $(DIRS) -name '*.go')
 	dep ensure -v
@@ -18,12 +18,12 @@ vendor/.timestamp: $(shell find $(DIRS) -name '*.go')
 vet:
 	go vet $(PACKAGES)
 
-lint: setup
+lint:
 	! find $(DIRS) -name '*.go' | xargs goimports -d | grep '^'
 	echo $(PACKAGES) | xargs -n 1 golint -set_exit_status
 
-fmt: setup
+fmt:
 	find $(DIRS) -name '*.go' | xargs goimports -w
 
-test: setup vendor
+test:
 	go test -v -race $(PACKAGES) | richgo testfilter

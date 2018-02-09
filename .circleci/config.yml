@@ -9,10 +9,11 @@ jobs:
       - image: circleci/golang:1.9
     steps:
       - checkout
+      - run: make setup
       - run: make vet lint
       - restore_cache:
           key: playground-go-{{ .Revision }}
-      - run: ls vendor/{{ .Revision }} > /dev/null 2>&1 || make vendor && touch vendor/{{ .Revision }}
+      - run: ls vendor/$CIRCLE_SHA1 > /dev/null 2>&1 || make vendor && touch vendor/$CIRCLE_SHA1
       - save_cache:
           key: playground-go-{{ .Revision }}
           paths: vendor
@@ -24,4 +25,6 @@ jobs:
       - checkout
       - restore_cache:
           key: playground-go-{{ .Revision }}
+      - run: make setup
+      - run: ls vendor/$CIRCLE_SHA1 > /dev/null 2>&1 || make vendor && touch vendor/$CIRCLE_SHA1
       - run: make test
