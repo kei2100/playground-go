@@ -19,14 +19,4 @@ jobs:
           paths: |
             vendor
             /go/bin
-  test:
-    working_directory: /go/src/github.com/kei2100/playground-go
-    docker:
-      - image: circleci/golang:1.9
-    steps:
-      - checkout
-      - restore_cache:
-          key: playground-go-{{ .Revision }}
-      - run: make setup
-      - run: ls vendor/$CIRCLE_SHA1 > /dev/null 2>&1 || make vendor && touch vendor/$CIRCLE_SHA1
       - run: make test
