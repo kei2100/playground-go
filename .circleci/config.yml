@@ -18,7 +18,7 @@ jobs:
       - run: ls vendor/$CIRCLE_SHA1 > /dev/null 2>&1 || make vendor && touch vendor/$CIRCLE_SHA1
       - save_cache:
           key: playground-go-{{ .Revision }}
-          paths: |
-            vendor
-            /go/bin
+          paths:
+            - vendor
+            - /go/bin
       - run: make test
