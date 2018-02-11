@@ -20,5 +20,5 @@ jobs:
           key: playground-go-{{ .Revision }}
           paths:
             - vendor
-            - /go/bin
+            - /go/bin/*
       - run: make test
