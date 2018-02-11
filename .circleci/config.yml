@@ -11,6 +11,8 @@ jobs:
       - checkout
       - restore_cache:
           key: playground-go-{{ .Revision }}
+      - run: ls -la /go/bin
+      - run: ls -la vendor
       - run: make setup
       - run: make vet lint
       - run: ls vendor/$CIRCLE_SHA1 > /dev/null 2>&1 || make vendor && touch vendor/$CIRCLE_SHA1
