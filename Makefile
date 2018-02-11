@@ -27,3 +27,4 @@ fmt:
 
 test:
 	go test -v -race $(PACKAGES) | richgo testfilter
+
