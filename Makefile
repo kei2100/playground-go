@@ -26,5 +26,4 @@ fmt:
 	find $(DIRS) -name '*.go' | xargs goimports -w
 
 test:
-	go test -v -race $(PACKAGES) | richgo testfilter
-
+	richgo test -v -race $(PACKAGES)
