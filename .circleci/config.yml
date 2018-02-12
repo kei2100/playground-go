@@ -8,21 +8,30 @@ jobs:
     docker:
       - image: circleci/golang:1.9
       - image: kei2100/mysql-initialized:5.7
-        environment:
-          MYSQL_ROOT_PASSWORD: pass
+#      - image: circleci/mysql:5.7
+#        environment:
+#          MYSQL_ROOT_PASSWORD: root
     steps:
-      - run: dockerize -wait tcp://localhost:3306 -timeout 1m
+      - checkout
 
-        #      - checkout
-        #      - run: rm -rf /go/bin  # for restoring /go/bin
-        #      - restore_cache:
-        #          key: playground-go-{{ .Revision }}
-        #      - run: make setup
-        #      - run: make vet lint
-        #      - run: ls vendor/$CIRCLE_SHA1 > /dev/null 2>&1 || make vendor && touch vendor/$CIRCLE_SHA1
-        #      - save_cache:
-        #          key: playground-go-{{ .Revision }}
-        #          paths:
-        #            - vendor
-        #            - /go/bin
-        #      - run: make test
+      - run: rm -rf /go/bin  # for restoring /go/bin
+      - restore_cache:
+          key: gobin-{{ checksum "Makefile" }}
+      - run: make setup
+      - save_cache:
+          key: gobin-{{ checksum "Makefile" }}
+          paths:
+            - /go/bin
+
+      - run: make vet lint
+
+      - restore_cache:
+          key: vendor-{{ checksum "Gopkg.lock" }}
+      - run: ls vendor > /dev/null 2>&1 || make vendor
+      - save_cache:
+          key: vendor-{{ checksum "Gopkg.lock" }}
+          paths:
+            - vendor
+
+      - run: dockerize -wait tcp://localhost:3306 -timeout 1m
+#      - run: make test
