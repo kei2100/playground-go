@@ -7,17 +7,22 @@ jobs:
     working_directory: /go/src/github.com/kei2100/playground-go
     docker:
       - image: circleci/golang:1.9
+      - image: kei2100/mysql-initialized:5.7
+        environment:
+          MYSQL_ROOT_PASSWORD: pass
     steps:
-      - checkout
-      - run: rm -rf /go/bin  # for restoring /go/bin
-      - restore_cache:
-          key: playground-go-{{ .Revision }}
-      - run: make setup
-      - run: make vet lint
-      - run: ls vendor/$CIRCLE_SHA1 > /dev/null 2>&1 || make vendor && touch vendor/$CIRCLE_SHA1
-      - save_cache:
-          key: playground-go-{{ .Revision }}
-          paths:
-            - vendor
-            - /go/bin
-      - run: make test
+      - run: dockerize -wait tcp://localhost:3306 -timeout 1m
+
+        #      - checkout
+        #      - run: rm -rf /go/bin  # for restoring /go/bin
+        #      - restore_cache:
+        #          key: playground-go-{{ .Revision }}
+        #      - run: make setup
+        #      - run: make vet lint
+        #      - run: ls vendor/$CIRCLE_SHA1 > /dev/null 2>&1 || make vendor && touch vendor/$CIRCLE_SHA1
+        #      - save_cache:
+        #          key: playground-go-{{ .Revision }}
+        #          paths:
+        #            - vendor
+        #            - /go/bin
+        #      - run: make test
