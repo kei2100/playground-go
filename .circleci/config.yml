@@ -7,7 +7,6 @@ jobs:
     working_directory: /go/src/github.com/kei2100/playground-go
     docker:
       - image: circleci/golang:1.9
-#      - image: kei2100/mysql-initialized:5.7
       - image: circleci/mysql:5.7
         environment:
           MYSQL_ROOT_PASSWORD: root
@@ -34,4 +33,4 @@ jobs:
             - vendor
 
       - run: dockerize -wait tcp://localhost:3306 -timeout 1m
-#      - run: make test
+      - run: make test
