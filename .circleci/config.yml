@@ -7,10 +7,10 @@ jobs:
     working_directory: /go/src/github.com/kei2100/playground-go
     docker:
       - image: circleci/golang:1.9
-      - image: kei2100/mysql-initialized:5.7
-#      - image: circleci/mysql:5.7
-#        environment:
-#          MYSQL_ROOT_PASSWORD: root
+#      - image: kei2100/mysql-initialized:5.7
+      - image: circleci/mysql:5.7
+        environment:
+          MYSQL_ROOT_PASSWORD: root
     steps:
       - checkout
 
