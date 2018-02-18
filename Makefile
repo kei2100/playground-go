@@ -1,4 +1,4 @@
-.PHONY: test fmt vet lint setup vendor
+.PHONY: test.nocache test fmt vet lint setup vendor
 
 PACKAGES := $(shell go list ./...)
 DIRS := $(shell go list -f '{{.Dir}}' ./...)
@@ -27,3 +27,7 @@ fmt:
 
 test:
 	richgo test -v -race $(PACKAGES)
+
+test.nocache:
+	richgo test -count=1 -v -race $(PACKAGES)
+
