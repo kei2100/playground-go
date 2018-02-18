@@ -83,7 +83,7 @@ func (s *TCPServer) Serve(ln net.Listener, handler TCPHandleFunc, opts ...TCPSer
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			if s.IsClosed() {
+			if s.IsClosing() || s.IsClosed() {
 				return ErrServerClosed
 			}
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
@@ -121,9 +121,10 @@ func (s *TCPServer) Close() error {
 // CloseListener closes the server listener. It stops accepting new connections
 func (s *TCPServer) CloseListener() error {
 	return s.withLockDo(func() error {
-		if s.IsClosed() {
+		if s.IsClosing() || s.IsClosed() {
 			return nil
 		}
+		s.state.Store(stateClosing)
 		err := s.ln.Close()
 		s.ln = nil
 		s.state.Store(stateClosed)
@@ -146,21 +147,9 @@ func (s *TCPServer) setOptions(opts ...TCPServerOptions) {
 
 const (
 	stateClosed = iota
+	stateClosing
 	stateListening
 )
-
-// IsListening reports whether the server listener is listening
-func (s *TCPServer) IsListening() bool {
-	switch ss := s.state.Load().(type) {
-	case int:
-		return ss == stateListening
-	case nil:
-		// The state has not been set yet(= not listening)
-		return false
-	default:
-		panic(fmt.Errorf("serv: invalid TCPServer.state type: %T", ss))
-	}
-}
 
 // IsClosed reports whether the server listener is closed
 func (s *TCPServer) IsClosed() bool {
@@ -170,6 +159,32 @@ func (s *TCPServer) IsClosed() bool {
 	case nil:
 		// The state has not been set yet(= closed)
 		return true
+	default:
+		panic(fmt.Errorf("serv: invalid TCPServer.state type: %T", ss))
+	}
+}
+
+// IsClosing reports whether the server listener is Closing
+func (s *TCPServer) IsClosing() bool {
+	switch ss := s.state.Load().(type) {
+	case int:
+		return ss == stateClosing
+	case nil:
+		// The state has not been set yet(= not closing)
+		return false
+	default:
+		panic(fmt.Errorf("serv: invalid TCPServer.state type: %T", ss))
+	}
+}
+
+// IsListening reports whether the server listener is listening
+func (s *TCPServer) IsListening() bool {
+	switch ss := s.state.Load().(type) {
+	case int:
+		return ss == stateListening
+	case nil:
+		// The state has not been set yet(= not listening)
+		return false
 	default:
 		panic(fmt.Errorf("serv: invalid TCPServer.state type: %T", ss))
 	}
