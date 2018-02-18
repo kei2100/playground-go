@@ -23,20 +23,20 @@ jobs:
             - /go/bin
 
       - restore_cache:
-          key: lint-{{ .Revision }}
-      - run: ls .circleci/lintok > /dev/null 2>&1 || make vet lint && touch .circleci/lintok
-      - save_cache:
-          key: lint-{{ .Revision }}
-          paths:
-            - .circleci/lintok
-
-      - restore_cache:
           key: vendor-{{ checksum "Gopkg.lock" }}
       - run: ls vendor > /dev/null 2>&1 || make vendor
       - save_cache:
           key: vendor-{{ checksum "Gopkg.lock" }}
           paths:
             - vendor
+
+      - restore_cache:
+          key: lint-{{ .Revision }}
+      - run: ls .circleci/lintok > /dev/null 2>&1 || make vet lint && touch .circleci/lintok
+      - save_cache:
+          key: lint-{{ .Revision }}
+          paths:
+            - .circleci/lintok
 
       - run: dockerize -wait tcp://localhost:3306 -timeout 1m
       - run: make test.nocache
