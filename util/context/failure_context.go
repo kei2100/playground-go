@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 )
 
 // FailureContext is an context interface, than can terminates with an error
@@ -17,7 +16,8 @@ type FailureContext interface {
 
 // failureContext is an implementation of context.Context, which can be terminated with any error.
 type failureContext struct {
-	p context.Context
+	// parent context
+	context.Context
 
 	once sync.Once
 	done chan struct{}
@@ -33,8 +33,8 @@ type failureContext struct {
 // call cancel as soon as the operations running in this Context complete.
 func Failure(p context.Context) (FailureContext, context.CancelFunc) {
 	c := &failureContext{
-		p:    p,
-		done: make(chan struct{}),
+		Context: p,
+		done:    make(chan struct{}),
 	}
 	can := func() {
 		c.Fail(context.Canceled)
@@ -61,10 +61,6 @@ func (c *failureContext) Fail(err error) {
 	})
 }
 
-func (c *failureContext) Deadline() (deadline time.Time, ok bool) {
-	return c.p.Deadline()
-}
-
 func (c *failureContext) Done() <-chan struct{} {
 	return c.done
 }
@@ -73,13 +69,9 @@ func (c *failureContext) Err() error {
 	return c.err
 }
 
-func (c *failureContext) Value(key interface{}) interface{} {
-	return c.p.Value(key)
-}
-
 func (c *failureContext) String() string {
 	// e.g.
 	// - context.Background.Failure()
 	// - context.Background.WithDeadline(2018-01-29 11:35:01.53441438 +0900 JST m=+1.001233545 [999.956341ms]).Failure()
-	return fmt.Sprintf("%v.Failure()", c.p)
+	return fmt.Sprintf("%v.Failure()", c.Context)
 }
