@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-func ExampleUnidirectionalChannel() {
+func _ExampleUnidirectionalChannel() {
 	ch := make(chan int)
 	wg := sync.WaitGroup{}
 

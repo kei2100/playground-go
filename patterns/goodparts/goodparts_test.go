@@ -49,7 +49,7 @@ func (c *LoggingGoodCache) Store(v string) {
 	c.cache.Store(v)
 }
 
-func ExampleGoodBadCache() {
+func _ExampleGoodBadCache() {
 	g := new(GoodCache)
 	g.Store("good")
 	fmt.Println(g.Get())

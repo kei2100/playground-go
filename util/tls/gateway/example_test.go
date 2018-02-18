@@ -10,7 +10,7 @@ import (
 	"github.com/kei2100/playground-go/util/tls/gateway"
 )
 
-func ExampleGateway() {
+func ExampleListen() {
 	remote, received := startRemoteServer()
 	defer remote.Close()
 

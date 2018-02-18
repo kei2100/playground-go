@@ -2,7 +2,7 @@ package slice
 
 import "fmt"
 
-func ExampleCap() {
+func _oooooExampleCap() {
 	s1 := make([]struct{}, 0)
 	s2 := append(s1, struct{}{})
 	s3 := make([]struct{}, 0, 10)

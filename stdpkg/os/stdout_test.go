@@ -7,21 +7,21 @@ import (
 	"syscall"
 )
 
-func ExampleStdoutPrintln() {
+func _ExampleStdoutPrintln() {
 	fmt.Println("test")
 
 	// Output:
 	// test
 }
 
-func ExampleStdoutUseStdout() {
+func _ExampleStdoutUseStdout() {
 	os.Stdout.Write([]byte("test"))
 
 	// Output:
 	// test
 }
 
-func ExampleStdoutUseFD() {
+func _ExampleStdoutUseFD() {
 	o := os.NewFile(uintptr(syscall.Stdout), "/dev/stdout")
 	if o == nil {
 		log.Fatal("file is nil")
