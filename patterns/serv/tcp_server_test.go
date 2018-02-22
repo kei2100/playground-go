@@ -5,9 +5,12 @@ import (
 	"errors"
 	"io/ioutil"
 	"net"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/kei2100/playground-go/util/wait"
 )
 
 func TestTCPServer_ServeClose(t *testing.T) {
@@ -69,6 +72,9 @@ func TestTCPServer_Close(t *testing.T) {
 	ln := mustTCPListen(t)
 	s := new(TCPServer)
 	go s.Serve(ln, func(conn net.Conn) {})
+	if err := wait.Condition(s.IsListening, 3*time.Second); err != nil {
+		t.Fatal("timeout exceeded while waiting for serv listening")
+	}
 
 	conn := mustTCPDial(t, ln.Addr())
 	defer conn.Close()
@@ -76,6 +82,9 @@ func TestTCPServer_Close(t *testing.T) {
 
 	if err := s.Close(); err != nil {
 		t.Error(err)
+	}
+	if err := wait.Condition(s.IsClosed, 3*time.Second); err != nil {
+		t.Fatal("timeout exceeded while waiting for serv listening")
 	}
 	if _, err := net.Dial("tcp", ln.Addr().String()); err == nil {
 		t.Errorf("dial got no error, want an error")
@@ -89,10 +98,12 @@ type acceptErrorListener struct {
 }
 
 func (l *acceptErrorListener) Accept() (net.Conn, error) {
+	runtime.Gosched()
 	return nil, l.raise
 }
 
 func (l *acceptErrorListener) Close() error {
+	runtime.Gosched()
 	return nil
 }
 
@@ -224,6 +235,9 @@ func TestTCPServer_DoubleClose(t *testing.T) {
 		s.Serve(ln, nopTCPHandler)
 		close(done)
 	}()
+	if err := wait.Condition(s.IsListening, 3*time.Second); err != nil {
+		t.Fatal("timeout exceeded while waiting for serv listening")
+	}
 
 	wg.Add(2)
 	go closeFunc(3)
