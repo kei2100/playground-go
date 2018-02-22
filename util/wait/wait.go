@@ -53,3 +53,37 @@ func ReceiveStructContext(ctx context.Context, ch <-chan struct{}) error {
 		return fmt.Errorf("wait: %v", ctx.Err())
 	}
 }
+
+// Condition continuously calls the condition function until it returns true.
+// When timeout exceeded while waiting for it, return an error.
+func Condition(condition func() bool, timeout time.Duration) error {
+	if timeout == 0 {
+		return errors.New("wait: timeout must be greater than zero")
+	}
+	ctx, can := context.WithTimeout(context.Background(), timeout)
+	defer can()
+	return ConditionContext(ctx, condition)
+}
+
+// ConditionContext continuously calls the condition function until it returns true.
+// When the context timeout exceeded, return an error.
+func ConditionContext(ctx context.Context, condition func() bool) error {
+	ok := make(chan struct{})
+	go func() {
+		for {
+			if !condition() {
+				time.Sleep(time.Millisecond)
+				continue
+			}
+			close(ok)
+			return
+		}
+	}()
+
+	select {
+	case <-ok:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("wait: %v", ctx.Err())
+	}
+}

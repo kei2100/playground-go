@@ -51,3 +51,27 @@ func TestReceive(t *testing.T) {
 		}
 	})
 }
+
+func TestCondition(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ok", func(t *testing.T) {
+		var i int
+		fn := func() bool {
+			if i < 3 {
+				i++
+				return false
+			}
+			return true
+		}
+		if err := Condition(fn, 10*time.Millisecond); err != nil {
+			t.Errorf("got %v, want no error", err)
+		}
+	})
+	t.Run("timeout", func(t *testing.T) {
+		fn := func() bool { return false }
+		if err := Condition(fn, 10*time.Millisecond); err == nil {
+			t.Error("got nil, want an error")
+		}
+	})
+}
