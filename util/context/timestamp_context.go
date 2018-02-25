@@ -17,7 +17,7 @@ type TimestampContext interface {
 	ListTimestamps() []Timestamp
 }
 
-// represents a Timestamp
+// Timestamp represents a timestamp
 type Timestamp struct {
 	Description string
 	Time        time.Time
