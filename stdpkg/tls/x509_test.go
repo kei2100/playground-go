@@ -35,8 +35,8 @@ func TestSelfSignAsCA(t *testing.T) {
 			CommonName:   "MyCompanyCA",
 		},
 
-		NotBefore: time.Unix(1000, 0),
-		NotAfter:  time.Unix(100000, 0),
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().AddDate(10, 0, 0),
 
 		SubjectKeyId:          subjKeyID,
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
@@ -54,8 +54,8 @@ func TestSelfSignAsCA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pem := pem.EncodeCertificateToMemory(cert)
+	certPEM := pem.EncodeCertificateToMemory(cert)
 	// 出力されたpem文字列をファイルにして以下で内容確認
 	// openssl x509 -in file.pem -text -noout
-	fmt.Println(string(pem))
+	fmt.Println(string(certPEM))
 }
