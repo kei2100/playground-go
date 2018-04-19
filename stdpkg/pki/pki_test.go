@@ -17,8 +17,11 @@ import (
 
 	"encoding/base64"
 
-	"github.com/kei2100/playground-go/util/encoding/pem"
+	"crypto/sha1"
+	"os"
 	"path/filepath"
+
+	"github.com/kei2100/playground-go/util/encoding/pem"
 )
 
 func TestSelfSignAsCA(t *testing.T) {
@@ -33,7 +36,11 @@ func testSelfSignAsCA(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
 	t.Helper()
 
 	var sn int64 = 1
-	var subjKeyID = []byte{1, 2, 3, 4}
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skID := sha1.Sum(x509.MarshalPKCS1PublicKey(&priv.PublicKey))
 
 	tmpl := x509.Certificate{
 		SerialNumber: big.NewInt(sn),
@@ -50,16 +57,12 @@ func testSelfSignAsCA(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
 		NotBefore: time.Now(),
 		NotAfter:  time.Now().AddDate(10, 0, 0),
 
-		SubjectKeyId:          subjKeyID,
+		SubjectKeyId:          skID[:],
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		BasicConstraintsValid: true,
 		IsCA: true,
 	}
 
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
 	certDER, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, priv.Public(), priv)
 	if err != nil {
 		t.Fatal(err)
@@ -75,9 +78,13 @@ func testSelfSignAsCA(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
 
 func TestIssueCerts(t *testing.T) {
 	ca, cakey := testSelfSignAsCA(t)
-	ckID := ca.SubjectKeyId
 
 	// サーバー証明書
+	srvPriv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srvSKID := sha1.Sum(x509.MarshalPKCS1PublicKey(&srvPriv.PublicKey))
 	srvTmpl := x509.Certificate{
 		SerialNumber: big.NewInt(ca.SerialNumber.Int64() + 1),
 
@@ -93,7 +100,7 @@ func TestIssueCerts(t *testing.T) {
 		NotBefore: time.Now(),
 		NotAfter:  time.Now().AddDate(0, 0, 825),
 
-		SubjectKeyId:   []byte{ckID[0], ckID[1], ckID[2], ckID[3] + 1},
+		SubjectKeyId:   srvSKID[:],
 		AuthorityKeyId: ca.SubjectKeyId,
 
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
@@ -102,10 +109,6 @@ func TestIssueCerts(t *testing.T) {
 		IsCA: false,
 	}
 
-	srvPriv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
 	srvCertDER, err := x509.CreateCertificate(rand.Reader, &srvTmpl, ca, srvPriv.Public(), cakey)
 	if err != nil {
 		t.Fatal(err)
@@ -116,6 +119,11 @@ func TestIssueCerts(t *testing.T) {
 	}
 
 	// クライアント証明書
+	clientPriv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientSKID := sha1.Sum(x509.MarshalPKCS1PublicKey(&clientPriv.PublicKey))
 	clientTmpl := x509.Certificate{
 		SerialNumber: big.NewInt(ca.SerialNumber.Int64() + 2),
 
@@ -131,7 +139,7 @@ func TestIssueCerts(t *testing.T) {
 		NotBefore: time.Now(),
 		NotAfter:  time.Now().AddDate(0, 0, 825),
 
-		SubjectKeyId:   []byte{ckID[0], ckID[1], ckID[2], ckID[3] + 2},
+		SubjectKeyId:   clientSKID[:],
 		AuthorityKeyId: ca.SubjectKeyId,
 
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
@@ -140,10 +148,6 @@ func TestIssueCerts(t *testing.T) {
 		IsCA: false,
 	}
 
-	clientPriv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
 	clientCertDER, err := x509.CreateCertificate(rand.Reader, &clientTmpl, ca, clientPriv.Public(), cakey)
 	if err != nil {
 		t.Fatal(err)
@@ -208,7 +212,7 @@ func TestIssueCerts(t *testing.T) {
 func writeFile(name string, b []byte) {
 	// FIXME 実際に書き込みたいときは false > true に
 	if false {
-		p := filepath.Join(".", name)
+		p := filepath.Join(os.Getenv("HOME"), "repos/github.com/kei2100/playground-nginx/examples/tls/conf.d/cert", name)
 		ioutil.WriteFile(p, b, 0644)
 	}
 }
