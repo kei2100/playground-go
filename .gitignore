@@ -1,5 +1,6 @@
 vendor
 .idea
+/*.iml
 bin
 tmp
 nohup.out
