@@ -2,12 +2,11 @@ package os
 
 import "os"
 
-// GetenvOrDefault call os.Getenv by the key, and returns the value.
-// Which will be the default value if the variable is not present.
+// GetenvOrDefault retrieves the value of the environment variable named by the key.
+// If the variable is not present, returns the default value
 func GetenvOrDefault(key, defaultV string) string {
-	v := os.Getenv(key)
-	if len(v) == 0 {
-		v = defaultV
+	if v, ok := os.LookupEnv(key); ok {
+		return v
 	}
-	return v
+	return defaultV
 }
