@@ -2,19 +2,19 @@ package http
 
 import (
 	"bytes"
-	"net/http"
-	"time"
-	"testing"
-	"net/http/httptest"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
+	"testing"
+	"time"
 )
 
 type downloader struct {
 	*http.ServeMux
 }
 
-func NewDownloader() *downloader {
+func newDownloader() *downloader {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/dl", func(w http.ResponseWriter, r *http.Request) {
 		modtime := time.Now()
@@ -30,7 +30,7 @@ func NewDownloader() *downloader {
 func TestDownloader(t *testing.T) {
 	t.Parallel()
 
-	sv := httptest.NewServer(NewDownloader())
+	sv := httptest.NewServer(newDownloader())
 	defer sv.Close()
 
 	res, err := http.Get(sv.URL + "/dl")
