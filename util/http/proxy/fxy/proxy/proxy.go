@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"crypto/tls"
 	"io"
 	"net/http"
 	"net/url"
@@ -26,22 +27,24 @@ var hopByHopHeaders = map[string]struct{}{
 
 // Server is a forward proxy server
 type Server struct {
-	Transport   *http.Client
-	once        sync.Once
-	Destination *url.URL
+	Destination     *url.URL
+	Forwarder       *http.Client
+	once            sync.Once
+	TLSClientConfig *tls.Config
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.once.Do(func() {
-		if s.Transport == nil {
-			s.Transport = http.DefaultClient
+		if s.Forwarder == nil {
+			t := &http.Transport{TLSClientConfig: s.TLSClientConfig}
+			s.Forwarder = &http.Client{Transport: t}
 		}
 	})
 
 	cp := new(http.Request)
 	s.copyRequest(r, cp)
 
-	res, err := s.Transport.Do(cp)
+	res, err := s.Forwarder.Do(cp)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
