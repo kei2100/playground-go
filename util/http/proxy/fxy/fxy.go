@@ -5,6 +5,8 @@ import (
 	"net"
 	"net/http"
 
+	"net/url"
+
 	"github.com/kei2100/playground-go/util/http/proxy/fxy/proxy"
 )
 
@@ -14,5 +16,11 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("listening on %s", ln.Addr())
-	http.Serve(ln, proxy.New())
+
+	dest, err := url.Parse("https://www.google.com")
+	if err != nil {
+		panic(err)
+	}
+	sv := proxy.Server{Destination: dest}
+	http.Serve(ln, &sv)
 }

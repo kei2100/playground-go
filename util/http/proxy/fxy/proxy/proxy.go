@@ -3,12 +3,9 @@ package proxy
 import (
 	"io"
 	"net/http"
+	"net/url"
+	"sync"
 )
-
-// Proxy Server
-type Proxy interface {
-	ServeHTTP(http.ResponseWriter, *http.Request)
-}
 
 // Hop-by-hop headers, which are meaningful only for a single
 // transport-level connection, and are not stored by caches or
@@ -27,21 +24,24 @@ var hopByHopHeaders = map[string]struct{}{
 	"Upgrade":           struct{}{},
 }
 
-type proxy struct {
-	transport *http.Client
+// Server is a forward proxy server
+type Server struct {
+	Transport   *http.Client
+	once        sync.Once
+	Destination *url.URL
 }
 
-// New returns Proxy
-func New() Proxy {
-	return &proxy{transport: http.DefaultClient}
-}
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.once.Do(func() {
+		if s.Transport == nil {
+			s.Transport = http.DefaultClient
+		}
+	})
 
-func (x *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cp := new(http.Request)
-	copyRequest(r, cp)
-	rewriteRequest(cp)
+	s.copyRequest(r, cp)
 
-	res, err := x.transport.Do(cp)
+	res, err := s.Transport.Do(cp)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -56,9 +56,12 @@ func (x *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, res.Body)
 }
 
-func copyRequest(orig *http.Request, cp *http.Request) {
+func (s *Server) copyRequest(orig, cp *http.Request) {
 	cp.Method = orig.Method
-	cp.URL = orig.URL
+
+	cp.URL = new(url.URL)
+	s.copyURL(orig.URL, cp.URL)
+
 	cp.Header = make(http.Header)
 	for k, v := range orig.Header {
 		if _, ok := hopByHopHeaders[k]; ok {
@@ -66,10 +69,41 @@ func copyRequest(orig *http.Request, cp *http.Request) {
 		}
 		cp.Header[k] = v
 	}
+
 	cp.Body = orig.Body
 }
 
-func rewriteRequest(r *http.Request) {
-	r.URL.Host = "www.google.jp"
-	r.URL.Scheme = "https"
+func (s *Server) copyURL(orig, cp *url.URL) {
+	if s.Destination == nil {
+		panic("proxy: Server.Destination must be set")
+	}
+
+	cp.Scheme = s.Destination.Scheme
+	cp.Host = s.Destination.Host
+
+	if s.Destination.User != nil {
+		cp.User = s.Destination.User
+	} else {
+		cp.User = orig.User
+	}
+
+	if dplen, oplen := len(s.Destination.Path), len(orig.Path); dplen > 0 && oplen > 0 {
+		cp.Path = s.Destination.Path + "/" + orig.Path
+	} else if dplen > 0 && oplen == 0 {
+		cp.Path = s.Destination.Path
+	} else if dplen == 0 && oplen > 0 {
+		cp.Path = orig.Path
+	}
+
+	if dplen, oplen := len(s.Destination.RawPath), len(orig.RawPath); dplen > 0 && oplen > 0 {
+		cp.RawPath = s.Destination.RawPath + "/" + orig.RawPath
+	} else if dplen > 0 && oplen == 0 {
+		cp.RawPath = s.Destination.RawPath
+	} else if dplen == 0 && oplen > 0 {
+		cp.RawPath = orig.RawPath
+	}
+
+	cp.ForceQuery = orig.ForceQuery
+	cp.RawQuery = orig.RawQuery
+	cp.Fragment = orig.Fragment
 }
