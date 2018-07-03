@@ -1,6 +1,10 @@
 package slice
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+	"testing"
+)
 
 func _oooooExampleCap() {
 	s1 := make([]struct{}, 0)
@@ -16,4 +20,16 @@ func _oooooExampleCap() {
 	fmt.Println(cap(s1))
 	fmt.Println(cap(s2))
 	fmt.Println(cap(s3))
+}
+
+func TestAppendNilSlice(t *testing.T) {
+	var s1 []string
+	s2 := make([]string, 0)
+
+	s1 = append(s1, "test")
+	s2 = append(s2, "test")
+
+	if !reflect.DeepEqual(s1, s2) {
+		t.Errorf("not same s1: %v, s2: %v", s1, s2)
+	}
 }
