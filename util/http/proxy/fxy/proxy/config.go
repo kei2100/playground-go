@@ -7,9 +7,75 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 
-	"github.com/hashicorp/packer/builder/azure/pkcs12"
+	"github.com/kei2100/playground-go/util/http/proxy/fxy/rewrite"
+	"golang.org/x/crypto/pkcs12"
 )
+
+// TODO
+//type HeaderConfig struct {
+//	ForwardHostHeader bool
+//}
+
+// URLConfig is a configuration of the URL
+type URLConfig struct {
+	Server             string            // destination server. proto://host[:port]
+	Username           string            // username or blank
+	Password           string            // password or blank
+	RewritePathEntries map[string]string // map[oldPath]newPath
+
+	host          string // host or host:port
+	scheme        string // http or https
+	userInfo      *url.Userinfo
+	pathRewriters []rewrite.PathRewriter
+}
+
+// Host returns the host or host:port
+func (c *URLConfig) Host() string {
+	return c.host
+}
+
+// Scheme returns the scheme
+func (c *URLConfig) Scheme() string {
+	return c.host
+}
+
+// UserInfo returns the *url.UserInfo or nil
+func (c *URLConfig) UserInfo() *url.Userinfo {
+	return c.userInfo
+}
+
+// PathRewriters returns path rewriters
+func (c *URLConfig) PathRewriters() []rewrite.PathRewriter {
+	return c.pathRewriters
+}
+
+// Load url infos given configuration
+func (c *URLConfig) Load() error {
+	u, err := url.Parse(c.Server)
+	if err != nil {
+		return fmt.Errorf("proxy: failed to parse Server string to URL: %v", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("proxy: invalid scheme %v", u.Scheme)
+	}
+	c.host = u.Host
+	c.scheme = u.Scheme
+
+	if c.Username != "" {
+		c.userInfo = url.UserPassword(c.Username, c.Password)
+	}
+
+	for old, new := range c.RewritePathEntries {
+		rwr, err := rewrite.NewRewriter(old, new)
+		if err != nil {
+			return fmt.Errorf("proxy: failed to interpret the rewrite string %v to %v", old, new)
+		}
+		c.pathRewriters = append(c.pathRewriters, rwr)
+	}
+	return nil
+}
 
 // TLSClientConfig is configuration of TLS client authentication
 type TLSClientConfig struct {
@@ -21,6 +87,21 @@ type TLSClientConfig struct {
 	caCertPEM []byte
 	certPEM   []byte
 	keyPEM    []byte
+}
+
+// CACertPEM returns ca certificate pem data
+func (c *TLSClientConfig) CACertPEM() []byte {
+	return c.caCertPEM
+}
+
+// CertPEM returns client certificate pem data
+func (c *TLSClientConfig) CertPEM() []byte {
+	return c.certPEM
+}
+
+// KeyPEM returns private key pem data for client certification
+func (c *TLSClientConfig) KeyPEM() []byte {
+	return c.keyPEM
 }
 
 // Load cert files given configuration
