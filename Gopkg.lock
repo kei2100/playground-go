@@ -47,6 +47,15 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/crypto"
+  packages = [
+    "pkcs12",
+    "pkcs12/internal/rc2"
+  ]
+  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -117,6 +126,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "39f137e761b4f2ea63f0fcdda06e90d43f1aa54dfe208884eb52f8f3b5b4541b"
+  inputs-digest = "58aa361ebc9ede1c7ffa1b3b6698b26458f45e78f2a98c33929a1833d238e3bd"
   solver-name = "gps-cdcl"
   solver-version = 1
