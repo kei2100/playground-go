@@ -11,6 +11,9 @@ type MultiLine interface {
 	// Add an error.
 	// If the error is nil, Add panics.
 	Add(error)
+
+	// Len returns the count of errors
+	Len() int
 }
 
 type multiLine struct {
@@ -22,6 +25,10 @@ func (e *multiLine) Add(err error) {
 		panic("errors: err is nil")
 	}
 	e.errs = append(e.errs, err)
+}
+
+func (e *multiLine) Len() int {
+	return len(e.errs)
 }
 
 func (e *multiLine) Error() string {
