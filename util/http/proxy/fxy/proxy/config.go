@@ -7,16 +7,44 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 
+	"github.com/kei2100/playground-go/util/http/proxy/fxy/errors"
 	"github.com/kei2100/playground-go/util/http/proxy/fxy/rewrite"
 	"golang.org/x/crypto/pkcs12"
 )
 
-// TODO
-//type HeaderConfig struct {
-//	ForwardHostHeader bool
-//}
+// Config for the proxy Server
+type Config struct {
+	Header    HeaderConfig
+	URL       URLConfig
+	TLSClient TLSClientConfig
+}
+
+// Load resources by given configuration
+func (c *Config) Load() error {
+	e := errors.NewMultiLine()
+	loaders := []func() error{
+		c.URL.Load,
+		c.TLSClient.Load,
+	}
+
+	for _, l := range loaders {
+		if err := l(); err != nil {
+			e.Add(err)
+		}
+	}
+	if e.Len() > 0 {
+		return e
+	}
+	return nil
+}
+
+// HeaderConfig is a configuration of the Request Header
+type HeaderConfig struct {
+	Header http.Header
+}
 
 // URLConfig is a configuration of the URL
 type URLConfig struct {
@@ -55,10 +83,10 @@ func (c *URLConfig) PathRewriters() []rewrite.PathRewriter {
 func (c *URLConfig) Load() error {
 	u, err := url.Parse(c.Server)
 	if err != nil {
-		return fmt.Errorf("proxy: failed to parse Server string to URL: %v", err)
+		return fmt.Errorf("config: failed to parse Server string to URL: %v", err)
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("proxy: invalid scheme %v", u.Scheme)
+		return fmt.Errorf("config: invalid scheme %v", u.Scheme)
 	}
 	c.host = u.Host
 	c.scheme = u.Scheme
@@ -70,7 +98,7 @@ func (c *URLConfig) Load() error {
 	for old, new := range c.RewritePathEntries {
 		rwr, err := rewrite.NewRewriter(old, new)
 		if err != nil {
-			return fmt.Errorf("proxy: failed to interpret the rewrite string %v to %v", old, new)
+			return fmt.Errorf("config: failed to interpret the rewrite string %v to %v", old, new)
 		}
 		c.pathRewriters = append(c.pathRewriters, rwr)
 	}
@@ -133,7 +161,7 @@ func (c *TLSClientConfig) loadCACert() error {
 	}
 	b, err := ioutil.ReadFile(c.CACertPath)
 	if err != nil {
-		return fmt.Errorf("proxy: failed to load ca cert file %v : %v", c.CACertPath, err)
+		return fmt.Errorf("config: failed to load ca cert file %v : %v", c.CACertPath, err)
 	}
 	c.caCertPEM = b
 	return nil
@@ -145,11 +173,11 @@ func (c *TLSClientConfig) loadPKCS12() error {
 	}
 	b, err := ioutil.ReadFile(c.PKCS12Path)
 	if err != nil {
-		return fmt.Errorf("proxy: failed to load pkcs12 file %v : %v", c.PKCS12Path, err)
+		return fmt.Errorf("config: failed to load pkcs12 file %v : %v", c.PKCS12Path, err)
 	}
 	key, cert, err := pkcs12.Decode(b, c.PKCS12Password)
 	if err != nil {
-		return fmt.Errorf("proxy: failed to decode pkcs12 data: %v", err)
+		return fmt.Errorf("config: failed to decode pkcs12 data: %v", err)
 	}
 	kp, err := encodePrivateKeyPEMToMemory(key)
 	if err != nil {
@@ -169,12 +197,12 @@ func encodePrivateKeyPEMToMemory(key interface{}) ([]byte, error) {
 	case *ecdsa.PrivateKey:
 		kb, err := x509.MarshalECPrivateKey(k)
 		if err != nil {
-			return nil, fmt.Errorf("proxy: failed to marshal ecdsa private key: %v", err)
+			return nil, fmt.Errorf("config: failed to marshal ecdsa private key: %v", err)
 		}
 		pemb := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: kb})
 		return pemb, nil
 	default:
-		return nil, fmt.Errorf("proxy: unknown private key type %T", key)
+		return nil, fmt.Errorf("config: unknown private key type %T", key)
 	}
 }
 
