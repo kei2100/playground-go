@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"crypto/tls"
+
 	"github.com/kei2100/playground-go/util/http/proxy/fxy/errors"
 	"github.com/kei2100/playground-go/util/http/proxy/fxy/rewrite"
 	"golang.org/x/crypto/pkcs12"
@@ -17,17 +19,17 @@ import (
 
 // Config for the proxy Server
 type Config struct {
-	Header    HeaderConfig
-	URL       URLConfig
-	TLSClient TLSClientConfig
+	HeaderConfig
+	URLConfig
+	TLSClientConfig
 }
 
 // Load resources by given configuration
 func (c *Config) Load() error {
 	e := errors.NewMultiLine()
 	loaders := []func() error{
-		c.URL.Load,
-		c.TLSClient.Load,
+		c.URLConfig.load,
+		c.TLSClientConfig.load,
 	}
 
 	for _, l := range loaders {
@@ -66,7 +68,7 @@ func (c *URLConfig) Host() string {
 
 // Scheme returns the scheme
 func (c *URLConfig) Scheme() string {
-	return c.host
+	return c.scheme
 }
 
 // UserInfo returns the *url.UserInfo or nil
@@ -79,8 +81,12 @@ func (c *URLConfig) PathRewriters() []rewrite.PathRewriter {
 	return c.pathRewriters
 }
 
-// Load url infos given configuration
-func (c *URLConfig) Load() error {
+// load url infos given configuration
+func (c *URLConfig) load() error {
+	if c == nil {
+		return nil
+	}
+
 	u, err := url.Parse(c.Server)
 	if err != nil {
 		return fmt.Errorf("config: failed to parse Server string to URL: %v", err)
@@ -115,28 +121,25 @@ type TLSClientConfig struct {
 	caCertPEM []byte
 	certPEM   []byte
 	keyPEM    []byte
+
+	tlsConfig *tls.Config
 }
 
-// CACertPEM returns ca certificate pem data
-func (c *TLSClientConfig) CACertPEM() []byte {
-	return c.caCertPEM
+// TLSConfig returns *tls.Config for the tls client certification
+func (c *TLSClientConfig) TLSConfig() *tls.Config {
+	return c.tlsConfig
 }
 
-// CertPEM returns client certificate pem data
-func (c *TLSClientConfig) CertPEM() []byte {
-	return c.certPEM
-}
+// load cert files given configuration
+func (c *TLSClientConfig) load() error {
+	if c == nil {
+		return nil
+	}
 
-// KeyPEM returns private key pem data for client certification
-func (c *TLSClientConfig) KeyPEM() []byte {
-	return c.keyPEM
-}
-
-// Load cert files given configuration
-func (c *TLSClientConfig) Load() error {
 	loader := new(errorOrLoader)
 	loader.load(c.loadCACert)
 	loader.load(c.loadPKCS12)
+	loader.load(c.loadTLSConfig)
 	return loader.Err()
 }
 
@@ -185,6 +188,28 @@ func (c *TLSClientConfig) loadPKCS12() error {
 	}
 	c.keyPEM = kp
 	c.certPEM = encodeCertPEMToMemory(cert)
+	return nil
+}
+
+func (c *TLSClientConfig) loadTLSConfig() error {
+	cfg := tls.Config{}
+
+	if certPEM := c.certPEM; certPEM != nil {
+		cert, err := tls.X509KeyPair(certPEM, c.keyPEM)
+		if err != nil {
+			return fmt.Errorf("config: failed to create x509 keypair: %v", err)
+		}
+		cfg.Certificates = []tls.Certificate{cert}
+	}
+	if certPEM := c.caCertPEM; certPEM != nil {
+		p := x509.NewCertPool()
+		if ok := p.AppendCertsFromPEM(certPEM); !ok {
+			return fmt.Errorf("config: failed to append ca cert file %v (%v bytes)", c.CACertPath, len(certPEM))
+		}
+		cfg.RootCAs = p
+	}
+
+	c.tlsConfig = &cfg
 	return nil
 }
 

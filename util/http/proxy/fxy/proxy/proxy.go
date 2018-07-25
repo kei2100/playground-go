@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"crypto/tls"
 	"io"
 	"net/http"
 	"net/url"
@@ -27,22 +26,24 @@ var hopByHopHeaders = map[string]struct{}{
 
 // Server is a forward proxy server
 type Server struct {
-	Destination     *url.URL
-	Forwarder       *http.Client
-	once            sync.Once
-	TLSClientConfig *tls.Config
+	Config    Config
+	Forwarder *http.Client
+	once      sync.Once
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.once.Do(func() {
 		if s.Forwarder == nil {
-			t := &http.Transport{TLSClientConfig: s.TLSClientConfig}
+			// TODO keep-alive
+			t := &http.Transport{TLSClientConfig: s.Config.TLSClientConfig.TLSConfig()}
 			s.Forwarder = &http.Client{Transport: t}
 		}
 	})
 
 	cp := new(http.Request)
 	s.copyRequest(r, cp)
+	s.rewriteHeader(cp)
+	s.rewriteURL(cp.URL)
 
 	res, err := s.Forwarder.Do(cp)
 	if err != nil {
@@ -53,18 +54,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	for h, vv := range res.Header {
 		for _, v := range vv {
-			w.Header().Set(h, v)
+			w.Header().Add(h, v)
 		}
 	}
+	w.WriteHeader(res.StatusCode)
 	io.Copy(w, res.Body)
 }
 
 func (s *Server) copyRequest(orig, cp *http.Request) {
 	cp.Method = orig.Method
-
-	cp.URL = new(url.URL)
-	s.copyURL(orig.URL, cp.URL)
-
+	cp.URL = orig.URL
 	cp.Header = make(http.Header)
 	for k, v := range orig.Header {
 		if _, ok := hopByHopHeaders[k]; ok {
@@ -72,41 +71,30 @@ func (s *Server) copyRequest(orig, cp *http.Request) {
 		}
 		cp.Header[k] = v
 	}
-
 	cp.Body = orig.Body
+	cp.Host = orig.Host
 }
 
-func (s *Server) copyURL(orig, cp *url.URL) {
-	if s.Destination == nil {
-		panic("proxy: Server.Destination must be set")
+func (s *Server) rewriteHeader(req *http.Request) {
+	for k := range s.Config.Header {
+		if k == "Host" {
+			req.Host = s.Config.Header.Get(k)
+			continue
+		}
+		req.Header.Set(k, s.Config.Header.Get(k))
 	}
+}
 
-	cp.Scheme = s.Destination.Scheme
-	cp.Host = s.Destination.Host
-
-	if s.Destination.User != nil {
-		cp.User = s.Destination.User
-	} else {
-		cp.User = orig.User
+func (s *Server) rewriteURL(u *url.URL) {
+	if len(s.Config.Server) == 0 {
+		panic("proxy: Server.Config.Server must be set")
 	}
-
-	if dplen, oplen := len(s.Destination.Path), len(orig.Path); dplen > 0 && oplen > 0 {
-		cp.Path = s.Destination.Path + "/" + orig.Path
-	} else if dplen > 0 && oplen == 0 {
-		cp.Path = s.Destination.Path
-	} else if dplen == 0 && oplen > 0 {
-		cp.Path = orig.Path
+	u.Scheme = s.Config.Scheme()
+	u.Host = s.Config.Host()
+	u.User = s.Config.UserInfo()
+	for _, rewrite := range s.Config.PathRewriters() {
+		if ok := rewrite.Do(u); ok {
+			break
+		}
 	}
-
-	if dplen, oplen := len(s.Destination.RawPath), len(orig.RawPath); dplen > 0 && oplen > 0 {
-		cp.RawPath = s.Destination.RawPath + "/" + orig.RawPath
-	} else if dplen > 0 && oplen == 0 {
-		cp.RawPath = s.Destination.RawPath
-	} else if dplen == 0 && oplen > 0 {
-		cp.RawPath = orig.RawPath
-	}
-
-	cp.ForceQuery = orig.ForceQuery
-	cp.RawQuery = orig.RawQuery
-	cp.Fragment = orig.Fragment
 }
