@@ -1,26 +1,33 @@
 package main
 
 import (
-	"fmt"
-	"net"
 	"net/http"
 
-	"net/url"
+	"fmt"
+	"net"
+
+	"log"
 
 	"github.com/kei2100/playground-go/util/http/proxy/fxy/proxy"
 )
 
 func main() {
-	ln, err := net.Listen("tcp", "localhost:0")
+	cfg := proxy.Config{
+		URLConfig: proxy.URLConfig{
+			Server: "https://www.google.com",
+		},
+	}
+
+	ln, err := net.Listen("tcp", "localhost:18888")
 	if err != nil {
 		panic(err)
 	}
+	defer ln.Close()
 	fmt.Printf("listening on %s", ln.Addr())
 
-	dest, err := url.Parse("https://www.google.com")
-	if err != nil {
-		panic(err)
+	if err := cfg.Load(); err != nil {
+		log.Fatalln(err)
 	}
-	sv := proxy.Server{Destination: dest}
-	http.Serve(ln, &sv)
+	err = http.Serve(ln, &proxy.Server{Config: cfg})
+	fmt.Println(err)
 }
