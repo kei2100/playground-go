@@ -72,7 +72,6 @@ func (s *Server) copyRequest(orig, cp *http.Request) {
 		cp.Header[k] = v
 	}
 	cp.Body = orig.Body
-	cp.Host = orig.Host
 }
 
 func (s *Server) rewriteHeader(req *http.Request) {
