@@ -19,8 +19,8 @@ import (
 
 // Config for the proxy Server
 type Config struct {
-	HeaderConfig
 	URLConfig
+	HeaderConfig
 	TLSClientConfig
 }
 
@@ -50,7 +50,7 @@ type HeaderConfig struct {
 
 // URLConfig is a configuration of the URL
 type URLConfig struct {
-	Server             string            // destination server. proto://host[:port]
+	Destination        string            // destination proto://host[:port]
 	Username           string            // username or blank
 	Password           string            // password or blank
 	RewritePathEntries map[string]string // map[oldPath]newPath
@@ -87,9 +87,9 @@ func (c *URLConfig) load() error {
 		return nil
 	}
 
-	u, err := url.Parse(c.Server)
+	u, err := url.Parse(c.Destination)
 	if err != nil {
-		return fmt.Errorf("config: failed to parse Server string to URL: %v", err)
+		return fmt.Errorf("config: failed to parse Destination string to URL: %v", err)
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return fmt.Errorf("config: invalid scheme %v", u.Scheme)

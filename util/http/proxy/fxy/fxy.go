@@ -1,12 +1,10 @@
 package main
 
 import (
-	"net/http"
-
 	"fmt"
-	"net"
-
 	"log"
+	"net"
+	"net/http"
 
 	"github.com/kei2100/playground-go/util/http/proxy/fxy/proxy"
 )
@@ -14,7 +12,7 @@ import (
 func main() {
 	cfg := proxy.Config{
 		URLConfig: proxy.URLConfig{
-			Server: "https://www.google.com",
+			Destination: "https://www.google.com",
 		},
 	}
 

@@ -85,8 +85,8 @@ func (s *Server) rewriteHeader(req *http.Request) {
 }
 
 func (s *Server) rewriteURL(u *url.URL) {
-	if len(s.Config.Server) == 0 {
-		panic("proxy: Server.Config.Server must be set")
+	if len(s.Config.Destination) == 0 {
+		panic("proxy: Server.Config.Destination must be set")
 	}
 	u.Scheme = s.Config.Scheme()
 	u.Host = s.Config.Host()
