@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
   revision = "a0583e0143b1624142adab07e0e97fe106d99561"
@@ -126,6 +132,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "58aa361ebc9ede1c7ffa1b3b6698b26458f45e78f2a98c33929a1833d238e3bd"
+  inputs-digest = "237dea0b4a7a09d2ec0857c5a4fc568562bdf92b38bbe474d05da4efddcffa7e"
   solver-name = "gps-cdcl"
   solver-version = 1
