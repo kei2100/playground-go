@@ -15,7 +15,7 @@ import (
 )
 
 // prepare
-// docker run -e MYSQL_ROOT_PASSWORD=pass -p 3306:3306 -d mysql:5.7
+// docker run -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 -d mysql:5.7
 var (
 	idPass   = "root:root"
 	hostPort = net.JoinHostPort("0.0.0.0", "3306")
