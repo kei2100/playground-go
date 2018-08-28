@@ -6,7 +6,7 @@ jobs:
   build:
     working_directory: /go/src/github.com/kei2100/playground-go
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11
       - image: circleci/mysql:5.7
         environment:
           MYSQL_ROOT_PASSWORD: root
