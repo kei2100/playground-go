@@ -31,3 +31,43 @@ func TestVar(t *testing.T) {
 		}
 	})
 }
+
+func setupMulti(t *testing.T, ups ...func(*testing.T) func(*testing.T)) (teardownMulti func(*testing.T)) {
+	t.Helper()
+
+	tds := make([]func(*testing.T), len(ups))
+	for i, up := range ups {
+		tds[i] = up(t)
+	}
+	return func(t *testing.T) {
+		t.Helper()
+		for _, td := range tds {
+			td(t)
+		}
+	}
+}
+
+func setupA(t *testing.T) func(*testing.T) {
+	t.Helper()
+	t.Log("setup A")
+	return func(t *testing.T) {
+		t.Helper()
+		t.Log("teardown A")
+	}
+}
+
+func setupB(t *testing.T) func(*testing.T) {
+	t.Helper()
+	t.Log("setup B")
+	return func(t *testing.T) {
+		t.Helper()
+		t.Log("teardown B")
+	}
+}
+
+func TestMulti(t *testing.T) {
+	teardown := setupMulti(t, setupA, setupB)
+	defer teardown(t)
+
+	t.Log("do test")
+}
