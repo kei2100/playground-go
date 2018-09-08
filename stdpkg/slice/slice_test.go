@@ -2,6 +2,7 @@ package slice
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"testing"
 )
@@ -32,4 +33,18 @@ func TestAppendNilSlice(t *testing.T) {
 	if !reflect.DeepEqual(s1, s2) {
 		t.Errorf("not same s1: %v, s2: %v", s1, s2)
 	}
+}
+
+func TestSubSliceIndexOORange(t *testing.T) {
+	s := []int{0, 1, 2}
+	log.Println(s[3:]) // []
+
+	s = []int{0}
+	log.Println(s[1:]) // []
+
+	//s = []int{}
+	//log.Println(s[1:]) // panics
+
+	//var ss []int
+	//log.Println(ss[1:]) // panics
 }
