@@ -2,6 +2,10 @@ package channel
 
 import (
 	"fmt"
+	"log"
+	"math/rand"
+	"os"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -59,4 +63,38 @@ func TestForSelect(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 	fmt.Println(<-ch)
+}
+
+func TestDynamicSelection(t *testing.T) {
+	ch1 := make(chan int)
+	ch2 := make(chan int)
+	ch3 := make(chan int)
+
+	cases := make([]reflect.SelectCase, 3)
+	for i, ch := range []interface{}{ch1, ch2, ch3} {
+		cases[i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(ch)}
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			if chosen, recv, ok := reflect.Select(cases); ok {
+				log.Printf("recv %v, ch%d chosen", recv, chosen+1)
+				return
+			}
+		}
+	}()
+
+	r := rand.New(rand.NewSource(int64(os.Getpid())))
+	i := r.Intn(3)
+	ch := []chan int{ch1, ch2, ch3}[i]
+
+	go func() { ch <- r.Intn(100) }()
+	select {
+	case <-done:
+		break
+	case <-time.After(time.Second):
+		t.Error("timeout")
+	}
 }
