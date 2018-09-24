@@ -98,3 +98,23 @@ func TestDynamicSelection(t *testing.T) {
 		t.Error("timeout")
 	}
 }
+
+func TestSelectDefault(t *testing.T) {
+	// send
+	ch := make(chan struct{})
+
+	select {
+	case ch <- struct{}{}:
+		t.Error("unexpected")
+	default:
+		// 送信時、channelに空きがなければdefaultに行く。
+		// このとき、chには値は入らない。
+	}
+
+	select {
+	case <-ch:
+		t.Error("unexpected")
+	default:
+		// do nothing
+	}
+}
