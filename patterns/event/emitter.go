@@ -1,61 +1,81 @@
 package event
 
 import (
-	"reflect"
 	"sync"
 )
 
-// AEvent hoghoge is an event
-type AEvent struct{}
-
-type emitter struct {
-	mu sync.RWMutex
-
-	listenersA map[uintptr]struct {
-		cb   func(event *AEvent)
-		remv func()
-	}
+// Emitter is an event emitter
+type Emitter struct {
+	mu             sync.RWMutex
+	topicListeners map[string]listeners
 }
 
-// EmitA event
-func (e *emitter) EmitA(ev *AEvent) {
+type listeners []chan interface{}
+
+// Emit emits an event
+func (e *Emitter) Emit(topic string, value interface{}) (done chan struct{}) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
-	for _, ln := range e.listenersA {
-		go ln.cb(ev)
+	done = make(chan struct{})
+
+	if e.topicListeners == nil {
+		close(done)
+		return done
 	}
+	lns, ok := e.topicListeners[topic]
+	if !ok || len(lns) == 0 {
+		close(done)
+		return done
+	}
+
+	go func() {
+		defer close(done)
+		for _, lnch := range lns {
+			lnch <- value
+		}
+	}()
+	return done
 }
 
-// OnA set the callback to be called when an event emitted
-func (e *emitter) OnA(callback func(event *AEvent)) (remove func()) {
-	ptr := reflect.ValueOf(callback).Pointer()
+// On returns a channel that receives events
+func (e *Emitter) On(topic string) <-chan interface{} {
+	ch := make(chan interface{})
 
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	if e.listenersA == nil {
-		e.listenersA = make(map[uintptr]struct {
-			cb   func(event *AEvent)
-			remv func()
-		})
-	}
-	if ln, ok := e.listenersA[ptr]; ok {
-		return ln.remv
+	if e.topicListeners == nil {
+		e.topicListeners = make(map[string]listeners, 1)
+		e.topicListeners[topic] = listeners{ch}
+		return ch
 	}
 
-	var once sync.Once
-	remv := func() {
-		once.Do(func() {
-			e.mu.Lock()
-			defer e.mu.Unlock()
-			delete(e.listenersA, ptr)
-		})
+	if lns, ok := e.topicListeners[topic]; ok {
+		e.topicListeners[topic] = append(lns, ch)
+	} else {
+		e.topicListeners[topic] = listeners{ch}
 	}
-	e.listenersA[ptr] = struct {
-		cb   func(event *AEvent)
-		remv func()
-	}{cb: callback, remv: remv}
+	return ch
+}
 
-	return remv
+// Off removes ch from event listeners and closes ch.
+// If the ch is not a listener, nothing happens.
+func (e *Emitter) Off(topic string, ch <-chan interface{}) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.topicListeners == nil {
+		return
+	}
+	lns, ok := e.topicListeners[topic]
+	if !ok {
+		return
+	}
+	for i, lnch := range lns {
+		if lnch == ch {
+			e.topicListeners[topic] = append(lns[:i], lns[i+1:]...)
+			close(lnch)
+		}
+	}
 }
