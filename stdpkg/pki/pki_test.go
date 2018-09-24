@@ -60,7 +60,7 @@ func testSelfSignAsCA(t *testing.T) (*x509.Certificate, *rsa.PrivateKey) {
 		SubjectKeyId:          skID[:],
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 	}
 
 	certDER, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, priv.Public(), priv)
@@ -106,7 +106,7 @@ func TestIssueCerts(t *testing.T) {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageDataEncipherment,
 		BasicConstraintsValid: true,
-		IsCA: false,
+		IsCA:                  false,
 	}
 
 	srvCertDER, err := x509.CreateCertificate(rand.Reader, &srvTmpl, ca, srvPriv.Public(), cakey)
@@ -145,7 +145,7 @@ func TestIssueCerts(t *testing.T) {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		KeyUsage:              x509.KeyUsageDigitalSignature,
 		BasicConstraintsValid: true,
-		IsCA: false,
+		IsCA:                  false,
 	}
 
 	clientCertDER, err := x509.CreateCertificate(rand.Reader, &clientTmpl, ca, clientPriv.Public(), cakey)
