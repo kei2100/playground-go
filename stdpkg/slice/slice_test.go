@@ -48,3 +48,12 @@ func TestSubSliceIndexOORange(t *testing.T) {
 	//var ss []int
 	//log.Println(ss[1:]) // panics
 }
+
+func TestRemoveElmIdiom(t *testing.T) {
+	s := []int{0, 1, 2, 3}
+	removed := append(s[:1], s[1+1:]...)
+
+	if !reflect.DeepEqual(removed, []int{0, 2, 3}) {
+		t.Errorf("unexpected state of slice %v", removed)
+	}
+}
