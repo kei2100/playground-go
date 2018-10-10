@@ -5,9 +5,7 @@ import (
 	"testing"
 )
 
-type someTokenKeyType string
-
-const someTokenKey someTokenKeyType = "__tokenKey__"
+const someTokenKey = "__tokenKey__"
 
 // WithSomeToken returns a copy of ctx in witch the token is set
 func WithSomeToken(ctx context.Context, token string) context.Context {
