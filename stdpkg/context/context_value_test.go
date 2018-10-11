@@ -39,3 +39,17 @@ func TestSomeToken(t *testing.T) {
 		t.Errorf("token got %v, want %v", g, w)
 	}
 }
+
+func TestCompare(t *testing.T) {
+	type aType string
+	type bType string
+
+	var a aType = "type"
+	var b bType = "type"
+
+	compare := func(x, y interface{}) bool { return x == y }
+
+	if compare(a, b) {
+		t.Error("compare returns true")
+	}
+}
