@@ -8,6 +8,15 @@
   version = "v3.2.0"
 
 [[projects]]
+  name = "github.com/go-chi/chi"
+  packages = [
+    ".",
+    "middleware"
+  ]
+  revision = "b5294d10673813fac8558e7f47242bc9e61b4c25"
+  version = "v3.3.3"
+
+[[projects]]
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
   revision = "a0583e0143b1624142adab07e0e97fe106d99561"
@@ -50,15 +59,6 @@
   name = "github.com/kardianos/osext"
   packages = ["."]
   revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/crypto"
-  packages = [
-    "pkcs12",
-    "pkcs12/internal/rc2"
-  ]
-  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
 [[projects]]
   branch = "master"
@@ -132,6 +132,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "237dea0b4a7a09d2ec0857c5a4fc568562bdf92b38bbe474d05da4efddcffa7e"
+  inputs-digest = "87314bd97a6a32362d77ace69db2dc5a3c07e37c752a6f3d82e89790b267e55d"
   solver-name = "gps-cdcl"
   solver-version = 1

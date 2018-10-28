@@ -1,4 +1,4 @@
-package serv
+package tcp
 
 import (
 	"bufio"
@@ -29,7 +29,7 @@ func TestTCPServer_ServeClose(t *testing.T) {
 		}
 	}
 
-	s := new(TCPServer)
+	s := new(Server)
 	ln := mustTCPListen(t)
 
 	closed := make(chan struct{})
@@ -70,7 +70,7 @@ func TestTCPServer_Close(t *testing.T) {
 	t.Parallel()
 
 	ln := mustTCPListen(t)
-	s := new(TCPServer)
+	s := new(Server)
 	go s.Serve(ln, func(conn net.Conn) {})
 	if err := wait.Condition(s.IsListening, 3*time.Second); err != nil {
 		t.Fatal("timeout exceeded while waiting for serv listening")
@@ -132,7 +132,7 @@ func TestTCPServer_Serve_HandleAcceptError(t *testing.T) {
 
 	t.Run("temporary error", func(t *testing.T) {
 		ln := &acceptErrorListener{raise: new(temporaryError)}
-		s := new(TCPServer)
+		s := new(Server)
 
 		closed := make(chan struct{})
 		go func() {
@@ -163,7 +163,7 @@ func TestTCPServer_Serve_HandleAcceptError(t *testing.T) {
 	t.Run("other error", func(t *testing.T) {
 		want := errors.New("other error")
 		ln := &acceptErrorListener{raise: want}
-		s := new(TCPServer)
+		s := new(Server)
 
 		closed := make(chan struct{})
 		go func() {
@@ -187,7 +187,7 @@ func TestTCPServer_DoubleServe(t *testing.T) {
 	t.Parallel()
 
 	ln := mustTCPListen(t)
-	s := new(TCPServer)
+	s := new(Server)
 	defer s.Close()
 
 	errch := make(chan error, 2)
@@ -213,7 +213,7 @@ func TestTCPServer_DoubleServe(t *testing.T) {
 func TestTCPServer_DoubleClose(t *testing.T) {
 	t.Parallel()
 
-	s := new(TCPServer)
+	s := new(Server)
 	defer s.Close()
 
 	wg := sync.WaitGroup{}
@@ -255,9 +255,9 @@ func TestTCPServer_DoubleClose(t *testing.T) {
 func TestTCPServer_Serve_WithOptions(t *testing.T) {
 	t.Parallel()
 
-	serveAndDial := func(o TCPServerOptions, f TCPHandleFunc) *TCPServer {
+	serveAndDial := func(o ServerOptions, f HandleFunc) *Server {
 		ln := mustTCPListen(t)
-		s := new(TCPServer)
+		s := new(Server)
 		go s.Serve(ln, f, o)
 		mustTCPDial(t, ln.Addr())
 		return s
@@ -289,7 +289,7 @@ func TestTCPServer_Stats(t *testing.T) {
 
 	t.Run("NumConnections", func(t *testing.T) {
 		ln := mustTCPListen(t)
-		s := new(TCPServer)
+		s := new(Server)
 		defer s.Close()
 
 		var serveIn, serveOut sync.WaitGroup
@@ -362,7 +362,7 @@ var nopTCPHandler = func(conn net.Conn) {
 	conn.Close()
 }
 
-func assertNumConnections(t *testing.T, s *TCPServer, want int) {
+func assertNumConnections(t *testing.T, s *Server, want int) {
 	t.Helper()
 
 	tick := time.NewTicker(1 * time.Millisecond)
