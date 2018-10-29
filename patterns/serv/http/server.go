@@ -4,7 +4,8 @@ import "net/http"
 
 // Server is a http server
 type Server struct {
-	router *router
+	MaxBodyBytes int64
+	router       *router
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

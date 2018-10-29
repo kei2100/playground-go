@@ -7,12 +7,12 @@ import (
 	"github.com/go-chi/chi/middleware"
 )
 
-// Routes setups routing for this server
-func (s *Server) Routes() {
+// Route setups routing for this server
+func (s *Server) Route() {
 	r := newRouter()
 	defer func() { s.router = r }()
 
-	//r.Use(s.maxBody())
+	r.Use(maxBody(s.MaxBodyBytes))
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 
