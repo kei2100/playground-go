@@ -5,8 +5,8 @@ DIRS := $(shell go list -f '{{.Dir}}' ./...)
 
 setup:
 	which dep > /dev/null 2>&1 || go get -u github.com/golang/dep/cmd/dep
-	which golint > /dev/null 2>&1 || go get -u github.com/golang/lint/golint
 	which goimports > /dev/null 2>&1 || go get -u golang.org/x/tools/cmd/goimports
+	which golint > /dev/null 2>&1 || go get -u golang.org/x/lint/golint
 	which richgo > /dev/null 2>&1 || go get -u github.com/kyoh86/richgo
 
 vendor: vendor/.timestamp
