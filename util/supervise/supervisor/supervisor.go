@@ -12,7 +12,7 @@ import (
 
 type supervisor struct {
 	exec string
-	argv []string
+	args []string
 
 	worker   *exec.Cmd
 	workerMu sync.RWMutex
@@ -22,10 +22,10 @@ type supervisor struct {
 }
 
 // NewSupervisor creates a supervisor
-func NewSupervisor(exec string, argv ...string) *supervisor {
+func NewSupervisor(exec string, args ...string) *supervisor {
 	return &supervisor{
 		exec: exec,
-		argv: argv,
+		args: args,
 	}
 }
 
@@ -54,7 +54,7 @@ func (sv *supervisor) Start() error {
 func (sv *supervisor) startWorker() error {
 	sv.workerMu.Lock()
 	defer sv.workerMu.Unlock()
-	c := exec.Command(sv.exec, sv.argv...)
+	c := exec.Command(sv.exec, sv.args...)
 	c.Stdout, c.Stderr = os.Stdout, os.Stderr
 	if err := c.Start(); err != nil {
 		return fmt.Errorf("supervisor: failed to start the worker: %v", err)
