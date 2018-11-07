@@ -22,6 +22,8 @@ type Supervisor struct {
 	AutoRestartEnabled bool
 	AutoRestartTimeout time.Duration
 
+	StopOldDelay time.Duration
+
 	worker   *worker.Worker
 	workerMu sync.RWMutex
 
@@ -99,6 +101,7 @@ func (s *Supervisor) restartWorker(ctx context.Context, stopSig os.Signal) error
 	}
 	s.chanCloseMonitor.addDone(newwk.Done())
 	// stop old worker
+	time.Sleep(s.StopOldDelay)
 	if err := oldwk.Stop(ctx, stopSig); err != nil {
 		log.Printf("supervisor: failed to stop old worker. sig %s. %v", stopSig, err)
 		log.Println("supervisor: force stopping old worker")

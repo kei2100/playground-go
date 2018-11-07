@@ -17,9 +17,36 @@ import (
 // and graceful restarts when the restart signal received.
 // default restart signal is HUP.
 func Serve(command string, opts ...OptionFunc) error {
+	return graceful.Serve(command, opts...)
+}
+
+// Restart graceful restarts manually
+func Restart() error {
+	return graceful.Restart()
+}
+
+var graceful = NewGraceful()
+
+// Graceful restart engine
+type Graceful struct {
+	manualRestartCh   chan struct{}
+	manualRestartedCh chan error
+}
+
+// NewGraceful creates a new Graceful
+func NewGraceful() *Graceful {
+	return &Graceful{
+		manualRestartCh:   make(chan struct{}),
+		manualRestartedCh: make(chan error),
+	}
+}
+
+// Serve executes given command
+// and graceful restarts when the restart signal received.
+// default restart signal is HUP.
+func (g *Graceful) Serve(command string, opts ...OptionFunc) error {
 	o := &option{}
 	o.applyOrDefault(opts)
-	o.autoRestartEnabled = true
 
 	sv := &supervisor.Supervisor{
 		Command:            command,
@@ -28,6 +55,7 @@ func Serve(command string, opts ...OptionFunc) error {
 		WaitReadyFunc:      o.waitReadyFunc,
 		AutoRestartEnabled: o.autoRestartEnabled,
 		AutoRestartTimeout: o.autoRestartTimeout,
+		StopOldDelay:       o.stopOldDelay,
 	}
 	done := make(chan struct{})
 	go func() {
@@ -50,6 +78,9 @@ func Serve(command string, opts ...OptionFunc) error {
 			if err := restart(sv, o); err != nil {
 				return err
 			}
+		case <-g.manualRestartCh:
+			err := restart(sv, o)
+			g.manualRestartedCh <- err
 		case sig := <-shutdownCh:
 			if err := shutdown(sv, sig, o); err != nil {
 				return err
@@ -57,6 +88,12 @@ func Serve(command string, opts ...OptionFunc) error {
 			return nil
 		}
 	}
+}
+
+// Restart graceful restarts manually
+func (g *Graceful) Restart() error {
+	g.manualRestartCh <- struct{}{}
+	return <-g.manualRestartedCh
 }
 
 func start(sv *supervisor.Supervisor, o *option) error {
@@ -105,12 +142,14 @@ type option struct {
 	startTimeout    time.Duration
 	restartTimeout  time.Duration
 	shutdownTimeout time.Duration
+	stopOldDelay    time.Duration
 }
 
 func (o *option) applyOrDefault(opts []OptionFunc) {
 	o.restartSignals = []os.Signal{syscall.SIGHUP}
 	o.shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT}
 	o.gracefulStopSignal = syscall.SIGTERM
+	o.stopOldDelay = time.Second
 	for _, f := range opts {
 		f(o)
 	}
@@ -182,4 +221,9 @@ func WithStartTimeout(startTimeout time.Duration) OptionFunc {
 // WithRestartTimeout set restartTimeout
 func WithRestartTimeout(restartTimeout time.Duration) OptionFunc {
 	return func(o *option) { o.restartTimeout = restartTimeout }
+}
+
+// WithStopOldDelay set stopOldDelay
+func WithStopOldDelay(stopOldDelay time.Duration) OptionFunc {
+	return func(o *option) { o.stopOldDelay = stopOldDelay }
 }
