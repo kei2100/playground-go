@@ -16,7 +16,8 @@ import (
 type Supervisor struct {
 	Command       string
 	Args          []string
-	Listeners     []net.Listener
+	ExtraFiles    []*os.File
+	Env           []string
 	WaitReadyFunc func(ctx context.Context, extraFileConns []net.Conn) error
 
 	AutoRestartEnabled bool
@@ -33,12 +34,7 @@ type Supervisor struct {
 // Start Supervisor
 // blocks until the worker process is done
 func (s *Supervisor) Start(ctx context.Context) error {
-	extraFiles, err := createListenerFiles(s.Listeners)
-	if err != nil {
-		return err
-	}
-	defer closeListenerFiles(extraFiles)
-	if err := s.startWorker(ctx, extraFiles); err != nil {
+	if err := s.startWorker(ctx); err != nil {
 		return err
 	}
 	<-s.chanCloseMonitor.Done()
@@ -61,12 +57,13 @@ func (s *Supervisor) Shutdown(ctx context.Context, stopSig os.Signal) error {
 	return nil
 }
 
-func (s *Supervisor) startWorker(ctx context.Context, extraFiles []*os.File) error {
+func (s *Supervisor) startWorker(ctx context.Context) error {
 	s.workerMu.Lock() // worker LOCK
 	wk := &worker.Worker{
 		Command:            s.Command,
 		Args:               s.Args,
-		ExtraFiles:         extraFiles,
+		ExtraFiles:         s.ExtraFiles,
+		Env:                s.Env,
 		WaitReadyFunc:      s.WaitReadyFunc,
 		AutoRestartTimeout: s.AutoRestartTimeout,
 	}
@@ -88,7 +85,8 @@ func (s *Supervisor) restartWorker(ctx context.Context, stopSig os.Signal) error
 	newwk := &worker.Worker{
 		Command:            s.Command,
 		Args:               s.Args,
-		ExtraFiles:         oldwk.ExtraFiles,
+		ExtraFiles:         s.ExtraFiles,
+		Env:                s.Env,
 		WaitReadyFunc:      s.WaitReadyFunc,
 		AutoRestartTimeout: s.AutoRestartTimeout,
 	}
@@ -125,43 +123,6 @@ func (s *Supervisor) shutdownWorker(ctx context.Context, stopSig os.Signal) erro
 		}
 	}
 	return nil
-}
-
-func createListenerFiles(listeners []net.Listener) ([]*os.File, error) {
-	fs := make([]*os.File, 0)
-	var err error
-loop:
-	for _, l := range listeners {
-		switch l := l.(type) {
-		case *net.TCPListener:
-			f, e := l.File()
-			if e != nil {
-				err = fmt.Errorf("supervisor: failed to create listener file: %v", e)
-				break loop
-			}
-			fs = append(fs, f)
-		default:
-			err = fmt.Errorf("supervisor: failed to create listener file. not implemented %T", l)
-			break loop
-		}
-	}
-	if err != nil {
-		for _, f := range fs {
-			if err := f.Close(); err != nil {
-				log.Printf("supervisor: an error occurred %v", err)
-			}
-		}
-		return nil, err
-	}
-	return fs, nil
-}
-
-func closeListenerFiles(files []*os.File) {
-	for _, f := range files {
-		if err := f.Close(); err != nil {
-			log.Printf("supervisor: failed to close listener files: %v", err)
-		}
-	}
 }
 
 type chanCloseMonitor struct {

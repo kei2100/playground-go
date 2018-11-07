@@ -48,10 +48,17 @@ func (g *Graceful) Serve(command string, opts ...OptionFunc) error {
 	o := &option{}
 	o.applyOrDefault(opts)
 
+	extraFiles, err := createListenerFiles(o.listeners)
+	if err != nil {
+		return err
+	}
+	defer closeListenerFiles(extraFiles)
+
 	sv := &supervisor.Supervisor{
 		Command:            command,
 		Args:               o.args,
-		Listeners:          o.listeners,
+		ExtraFiles:         extraFiles,
+		Env:                []string{listenersEnv(o.listeners)},
 		WaitReadyFunc:      o.waitReadyFunc,
 		AutoRestartEnabled: o.autoRestartEnabled,
 		AutoRestartTimeout: o.autoRestartTimeout,

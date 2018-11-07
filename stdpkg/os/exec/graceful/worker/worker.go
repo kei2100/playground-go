@@ -16,6 +16,7 @@ type Worker struct {
 	Command            string
 	Args               []string
 	ExtraFiles         []*os.File
+	Env                []string
 	WaitReadyFunc      func(ctx context.Context, extraFileConns []net.Conn) error
 	AutoRestartTimeout time.Duration
 
@@ -109,6 +110,7 @@ func (w *Worker) startProcess(ctx context.Context) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.ExtraFiles = w.ExtraFiles
+	cmd.Env = w.Env
 	if err := cmd.Start(); err != nil {
 		w.cmdMu.Unlock() // cmd UNLOCK
 		return fmt.Errorf("worker: failed to restart command: %v", err)
