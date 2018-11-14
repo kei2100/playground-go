@@ -41,5 +41,7 @@ jobs:
       - run: dockerize -wait tcp://localhost:3306 -timeout 1m
       - run: make test.nocache
       - run:
-          command: trap 'trapped' 2 3 15; sleep 100; echo 'done'
+          command: sleep 100 && echo 'done 100'
           background: true
+      - run:
+          command: sleep 10 && echo 'done 10'
