@@ -40,8 +40,3 @@ jobs:
 
       - run: dockerize -wait tcp://localhost:3306 -timeout 1m
       - run: make test.nocache
-      - run:
-          command: sleep 100 && echo 'done 100'
-          background: true
-      - run:
-          command: sleep 10 && echo 'done 10'
