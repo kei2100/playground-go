@@ -11,7 +11,7 @@ setup:
 
 vendor: vendor/.timestamp
 
-vendor/.timestamp: $(shell find $(DIRS) -name '*.go')
+vendor/.timestamp: $(shell find $(DIRS) -maxdepth 1 -name '*.go')
 	dep ensure -v
 	touch vendor/.timestamp
 
@@ -19,11 +19,11 @@ vet:
 	go vet $(PACKAGES)
 
 lint:
-	! find $(DIRS) -name '*.go' | xargs goimports -d | grep '^'
+	! find $(DIRS) -maxdepth 1 -name '*.go' | xargs goimports -d | grep '^'
 	echo $(PACKAGES) | xargs -n 1 golint -set_exit_status
 
 fmt:
-	find $(DIRS) -name '*.go' | xargs goimports -w
+	find $(DIRS) -maxdepth 1 -name '*.go' | xargs goimports -w
 
 test:
 	richgo test -v -race $(PACKAGES)
