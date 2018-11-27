@@ -68,22 +68,16 @@ func Condition(condition func() bool, timeout time.Duration) error {
 // ConditionContext continuously calls the condition function until it returns true.
 // When the context timeout exceeded, return an error.
 func ConditionContext(ctx context.Context, condition func() bool) error {
-	ok := make(chan struct{})
-	go func() {
-		for {
-			if !condition() {
-				time.Sleep(time.Millisecond)
-				continue
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if condition() {
+				return nil
 			}
-			close(ok)
-			return
+		case <-ctx.Done():
+			return fmt.Errorf("wait: %v", ctx.Err())
 		}
-	}()
-
-	select {
-	case <-ok:
-		return nil
-	case <-ctx.Done():
-		return fmt.Errorf("wait: %v", ctx.Err())
 	}
 }
