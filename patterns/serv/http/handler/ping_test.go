@@ -5,7 +5,7 @@ import (
 )
 
 func TestPing(t *testing.T) {
-	rec := sendRequest(t, "GET", "/ping", nil)
+	rec := servAndRecord(t, "GET", "/ping", nil, nil)
 	assertResponseCode(t, rec.Code, 200)
 	assertResponseJSON(t, rec.Body, map[string]interface{}{
 		"message": "ok",

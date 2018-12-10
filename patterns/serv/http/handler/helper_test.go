@@ -12,12 +12,17 @@ import (
 	httplib "github.com/kei2100/playground-go/patterns/serv/http"
 )
 
-func sendRequest(t *testing.T, method, path string, body io.Reader) httptest.ResponseRecorder {
+func servAndRecord(t *testing.T, method, path string, header http.Header, body io.Reader) httptest.ResponseRecorder {
 	t.Helper()
 	r, err := http.NewRequest(method, path, body)
 	if err != nil {
 		t.Errorf("failed to create a request: %v", err)
 		return httptest.ResponseRecorder{}
+	}
+	for h, vv := range header {
+		for _, v := range vv {
+			r.Header.Add(h, v)
+		}
 	}
 	srv := httplib.Server{}
 	srv.Route()
