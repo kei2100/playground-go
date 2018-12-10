@@ -1,7 +1,6 @@
 package handler_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -38,7 +37,7 @@ func assertResponseCode(t *testing.T, gotCode, wantCode int) {
 	}
 }
 
-func assertResponseJSON(t *testing.T, gotBody *bytes.Buffer, wantBody interface{}) {
+func assertResponseJSON(t *testing.T, gotBody io.Reader, wantBody interface{}) {
 	t.Helper()
 
 	var wantJSON []byte
@@ -56,14 +55,13 @@ func assertResponseJSON(t *testing.T, gotBody *bytes.Buffer, wantBody interface{
 	}
 
 	got := make(map[string]interface{})
-	want := make(map[string]interface{})
-	err := json.Unmarshal(gotBody.Bytes(), &got)
-	if err != nil {
+	dec := json.NewDecoder(gotBody)
+	if err := dec.Decode(&got); err != nil {
 		t.Errorf("failed to unmarshal got body to json: %v", err)
 		return
 	}
-	err = json.Unmarshal(wantJSON, &want)
-	if err != nil {
+	want := make(map[string]interface{})
+	if err := json.Unmarshal(wantJSON, &want); err != nil {
 		t.Errorf("failed to unmarshal want body to json: %v", err)
 		return
 	}
