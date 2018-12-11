@@ -45,22 +45,24 @@ func assertResponseJSON(t *testing.T, gotBody io.Reader, wantBody interface{}) {
 	switch rv.Kind() {
 	case reflect.String:
 		wantJSON = []byte(rv.String())
-	case reflect.Struct, reflect.Map:
+	case reflect.Struct, reflect.Map, reflect.Array, reflect.Slice:
 		var err error
 		wantJSON, err = json.Marshal(wantBody)
 		if err != nil {
 			t.Errorf("failed to marshal wantBody to json: %v", err)
 			return
 		}
+	default:
+		t.Errorf("unexpected wantBody type: %v", rv.Kind())
+		return
 	}
 
-	got := make(map[string]interface{})
+	var got, want interface{}
 	dec := json.NewDecoder(gotBody)
 	if err := dec.Decode(&got); err != nil {
 		t.Errorf("failed to unmarshal got body to json: %v", err)
 		return
 	}
-	want := make(map[string]interface{})
 	if err := json.Unmarshal(wantJSON, &want); err != nil {
 		t.Errorf("failed to unmarshal want body to json: %v", err)
 		return
