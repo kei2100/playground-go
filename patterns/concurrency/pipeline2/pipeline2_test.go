@@ -49,3 +49,56 @@ func TestGenerator(t *testing.T) {
 	ch := generator(ctx, 1, 2, 3)
 	assertRecvSeq(t, time.Second, ch, 1, 2, 3)
 }
+
+func repeat(ctx context.Context, values ...interface{}) <-chan interface{} {
+	ch := make(chan interface{})
+	go func() {
+		defer close(ch)
+		for {
+			for _, v := range values {
+				select {
+				case <-ctx.Done():
+					return
+				case ch <- v:
+				}
+			}
+		}
+	}()
+	return ch
+}
+
+func take(ctx context.Context, stream <-chan interface{}, num int) <-chan interface{} {
+	ch := make(chan interface{})
+	go func() {
+		defer close(ch)
+		done := ctx.Done()
+		for i := 0; i < num; {
+			select {
+			case <-done:
+				return
+			case v := <-stream:
+				select {
+				case <-done:
+					return
+				case ch <- v:
+					i++
+				}
+			}
+		}
+	}()
+	return ch
+}
+
+func TestRepeatTake(t *testing.T) {
+	ctx, can := context.WithTimeout(context.Background(), time.Second)
+	defer can()
+
+	ch := take(ctx, repeat(ctx, 1, 2, 3), 4)
+	cnt := 0
+	for v := range ch {
+		cnt += v.(int)
+	}
+	if g, w := cnt, 7; g != w {
+		t.Errorf("cnt got %v, want %v", g, w)
+	}
+}
