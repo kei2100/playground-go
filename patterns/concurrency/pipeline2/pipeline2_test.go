@@ -154,7 +154,7 @@ func merge(ctx context.Context, streams ...<-chan interface{}) <-chan interface{
 	wg := sync.WaitGroup{}
 	merged := make(chan interface{})
 
-	mux := func(ch <-chan interface{}) {
+	drain := func(ch <-chan interface{}) {
 		defer wg.Done()
 		for v := range recvOrDone(ctx, ch) {
 			sendOrDone(ctx, merged, v)
@@ -163,7 +163,7 @@ func merge(ctx context.Context, streams ...<-chan interface{}) <-chan interface{
 
 	for _, s := range streams {
 		wg.Add(1)
-		go mux(s)
+		go drain(s)
 	}
 	go func() {
 		wg.Wait()
