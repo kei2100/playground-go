@@ -24,12 +24,39 @@ func generator(ctx context.Context, values ...interface{}) <-chan interface{} {
 	return ch
 }
 
-func assertRecvSeq(t *testing.T, timeout time.Duration, ch <-chan interface{}, wants ...interface{}) {
+func assertRecv(t *testing.T, ch <-chan interface{}, want interface{}) {
 	t.Helper()
-	if timeout == 0 {
-		timeout = time.Second
+	ctx, can := context.WithTimeout(context.Background(), time.Second)
+	defer can()
+	assertRecvContext(t, ctx, ch, want)
+}
+
+func assertRecvContext(t *testing.T, ctx context.Context, ch <-chan interface{}, want interface{}) {
+	t.Helper()
+	done := ctx.Done()
+	select {
+	case <-done:
+		t.Errorf("timeout while waiting for %v", want)
+		return
+	case got, ok := <-ch:
+		if !ok {
+			t.Errorf("ch closed. want %v", want)
+		} else if got != want {
+			t.Errorf("recv %v, want %v", got, want)
+		}
 	}
-	done := time.After(timeout)
+}
+
+func assertRecvSeq(t *testing.T, ch <-chan interface{}, wants ...interface{}) {
+	t.Helper()
+	ctx, can := context.WithTimeout(context.Background(), time.Second)
+	defer can()
+	assertRecvSeqContext(t, ctx, ch, wants...)
+}
+
+func assertRecvSeqContext(t *testing.T, ctx context.Context, ch <-chan interface{}, wants ...interface{}) {
+	t.Helper()
+	done := ctx.Done()
 	for i, want := range wants {
 		select {
 		case <-done:
@@ -49,7 +76,7 @@ func TestGenerator(t *testing.T) {
 	ctx, can := context.WithTimeout(context.Background(), time.Second)
 	defer can()
 	ch := generator(ctx, 1, 2, 3)
-	assertRecvSeq(t, time.Second, ch, 1, 2, 3)
+	assertRecvSeq(t, ch, 1, 2, 3)
 }
 
 func repeat(ctx context.Context, values ...interface{}) <-chan interface{} {
@@ -191,4 +218,47 @@ func TestFanOutFanIn(t *testing.T) {
 	if g, w := sum, 12; g != w {
 		t.Errorf("sum got %v, want %v", g, w)
 	}
+}
+
+func tee(ctx context.Context, stream <-chan interface{}) (_, _ chan interface{}) {
+	ch1, ch2 := make(chan interface{}), make(chan interface{})
+	go func() {
+		defer func() {
+			close(ch1)
+			close(ch2)
+		}()
+
+		for v := range recvOrDone(ctx, stream) {
+			var c1, c2 = ch1, ch2
+			for i := 0; i < 2; i++ {
+				select {
+				case c1 <- v:
+					c1 = nil
+				case c2 <- v:
+					c2 = nil
+				}
+			}
+		}
+	}()
+	return ch1, ch2
+}
+
+func TestTee(t *testing.T) {
+	ch := make(chan interface{})
+	ctx, can := context.WithTimeout(context.Background(), time.Second)
+	defer can()
+
+	go func() {
+		sendOrDone(ctx, ch, 1)
+		sendOrDone(ctx, ch, 2)
+		sendOrDone(ctx, ch, 3)
+	}()
+
+	tc1, tc2 := tee(ctx, ch)
+	assertRecv(t, tc1, 1)
+	assertRecv(t, tc2, 1)
+	assertRecv(t, tc1, 2)
+	assertRecv(t, tc2, 2)
+	assertRecv(t, tc1, 3)
+	assertRecv(t, tc2, 3)
 }
