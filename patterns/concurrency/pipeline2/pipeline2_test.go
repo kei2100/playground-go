@@ -28,10 +28,10 @@ func assertRecv(t *testing.T, ch <-chan interface{}, want interface{}) {
 	t.Helper()
 	ctx, can := context.WithTimeout(context.Background(), time.Second)
 	defer can()
-	assertRecvContext(t, ctx, ch, want)
+	assertRecvContext(ctx, t, ch, want)
 }
 
-func assertRecvContext(t *testing.T, ctx context.Context, ch <-chan interface{}, want interface{}) {
+func assertRecvContext(ctx context.Context, t *testing.T, ch <-chan interface{}, want interface{}) {
 	t.Helper()
 	done := ctx.Done()
 	select {
@@ -51,10 +51,10 @@ func assertRecvSeq(t *testing.T, ch <-chan interface{}, wants ...interface{}) {
 	t.Helper()
 	ctx, can := context.WithTimeout(context.Background(), time.Second)
 	defer can()
-	assertRecvSeqContext(t, ctx, ch, wants...)
+	assertRecvSeqContext(ctx, t, ch, wants...)
 }
 
-func assertRecvSeqContext(t *testing.T, ctx context.Context, ch <-chan interface{}, wants ...interface{}) {
+func assertRecvSeqContext(ctx context.Context, t *testing.T, ch <-chan interface{}, wants ...interface{}) {
 	t.Helper()
 	done := ctx.Done()
 	for i, want := range wants {
