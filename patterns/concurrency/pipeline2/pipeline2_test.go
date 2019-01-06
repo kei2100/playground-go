@@ -232,6 +232,8 @@ func tee(ctx context.Context, stream <-chan interface{}) (_, _ chan interface{})
 			var c1, c2 = ch1, ch2
 			for i := 0; i < 2; i++ {
 				select {
+				case <- ctx.Done():
+					return
 				case c1 <- v:
 					c1 = nil
 				case c2 <- v:
@@ -261,4 +263,52 @@ func TestTee(t *testing.T) {
 	assertRecv(t, tc2, 2)
 	assertRecv(t, tc1, 3)
 	assertRecv(t, tc2, 3)
+}
+
+func bridge(ctx context.Context, chStream <- chan <- chan interface{}) <- chan interface{} {
+	out := make(chan interface{})
+	go func() {
+		defer close(out)
+		for {
+			var in <- chan interface{}
+			select {
+			case <- ctx.Done():
+				return
+			case ch, ok := <- chStream:
+				if !ok  {
+					return
+				}
+				in = ch
+			}
+			for v := range recvOrDone(ctx, in) {
+				sendOrDone(ctx, out, v)
+			}
+		}
+	}()
+	return out
+}
+
+func TestBridge(t *testing.T) {
+	ctx, can := context.WithTimeout(context.Background(), time.Second)
+	defer can()
+
+	ch1 := take(ctx, repeat(ctx, 1), 1)
+	ch2 := take(ctx, repeat(ctx, 2), 2)
+	chStream := make(chan (<- chan interface{}))
+	go func() {
+		defer close(chStream)
+		select {
+		case <- ctx.Done():
+			return
+		case chStream <- ch1:
+		}
+		select {
+		case <- ctx.Done():
+			return
+		case chStream <- ch2:
+		}
+	}()
+
+	out := bridge(ctx, chStream)
+	assertRecvSeqContext(ctx, t, out, 1, 2, 2)
 }
