@@ -71,3 +71,7 @@
 [[constraint]]
   name = "github.com/hashicorp/packer"
   version = "v1.2.2"
+
+[[constraint]]
+  name = "bitbucket.org/avd/go-ipc"
+  version = "0.6.0"

@@ -2,6 +2,16 @@
 
 
 [[projects]]
+  name = "bitbucket.org/avd/go-ipc"
+  packages = [
+    "fifo",
+    "internal/allocator",
+    "internal/common"
+  ]
+  revision = "065116ebcd507e90ac2abbe7604d7f46e37627ad"
+  version = "v0.6.0"
+
+[[projects]]
   name = "github.com/dgrijalva/jwt-go"
   packages = ["."]
   revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
@@ -46,6 +56,12 @@
   version = "v0.3.2"
 
 [[projects]]
+  name = "github.com/google/wire"
+  packages = ["."]
+  revision = "9a7ae3ba6b734d831e88c75966fd5e9c0abdeace"
+  version = "v0.2.1"
+
+[[projects]]
   name = "github.com/hashicorp/packer"
   packages = [
     "builder/azure/pkcs12",
@@ -59,6 +75,12 @@
   name = "github.com/kardianos/osext"
   packages = ["."]
   revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
+
+[[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
 
 [[projects]]
   branch = "master"
@@ -76,6 +98,15 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/sys"
+  packages = [
+    "unix",
+    "windows"
+  ]
+  revision = "302c3dd5f1cc82baae8e44d9c3178e89b6e2b345"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/text"
   packages = [
     "internal/gen",
@@ -86,8 +117,7 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable",
-    "width"
+    "unicode/rangetable"
   ]
   revision = "cfdf022e86b4ecfb646e1efbd7db175dd623a8fa"
 
@@ -132,6 +162,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "87314bd97a6a32362d77ace69db2dc5a3c07e37c752a6f3d82e89790b267e55d"
+  inputs-digest = "f3948b0c550719f7ab57eb74e11569c270888f6f5467e63c012bab7aafbaba3f"
   solver-name = "gps-cdcl"
   solver-version = 1
