@@ -1,11 +1,12 @@
 package main_test
 
 import (
-	"bitbucket.org/avd/go-ipc/fifo"
 	"log"
 	"os"
 	"sync"
 	"testing"
+
+	"bitbucket.org/avd/go-ipc/fifo"
 )
 
 func TestFIFO(t *testing.T) {
