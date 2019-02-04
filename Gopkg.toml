@@ -75,3 +75,7 @@
 [[constraint]]
   name = "bitbucket.org/avd/go-ipc"
   version = "0.6.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/stacktitan/smb"
