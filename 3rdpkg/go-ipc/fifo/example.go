@@ -22,6 +22,7 @@ func main() {
 	}()
 	buff := make([]byte, len(testData))
 	fifo, err := fifo.New("fifo", os.O_CREATE|os.O_RDONLY, 0666)
+	//fifo, err := fifo.New("fifo", os.O_CREATE|os.O_RDONLY|fifo.O_NONBLOCK, 0666) // non blocking
 	if err != nil {
 		panic("new")
 	}

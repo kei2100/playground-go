@@ -10,7 +10,8 @@ import (
 
 func main() {
 	mq.Destroy("mq")
-	q, err := mq.New("mq", os.O_CREATE|os.O_EXCL, 0666)
+	//q, err := mq.New("mq", os.O_CREATE|os.O_EXCL, 0666)
+	q, err := mq.New("mq", os.O_CREATE, 0666)
 	if err != nil {
 		log.Fatalf("new queue: %v", err)
 	}
@@ -27,7 +28,9 @@ func main() {
 		log.Println("done recv2")
 	}()
 
-	q2, err := mq.Open("mq", 0)
+	//q2, err := mq.New("mq", os.O_RDWR, 0666)
+	q2, err := mq.New("mq", os.O_CREATE, 0666)
+	//q2, err := mq.Open("mq", 0)
 	if err != nil {
 		panic("open")
 	}
