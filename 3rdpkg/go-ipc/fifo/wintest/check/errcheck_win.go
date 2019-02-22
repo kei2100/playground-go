@@ -15,8 +15,8 @@ import (
 func Errcheck() {
 	rfifo, err := fifo.New("rfifo", os.O_CREATE|os.O_RDONLY|os.O_TRUNC|fifo.O_NONBLOCK, 0666)
 	if err != nil {
-			log.Printf("rfifo errno error: %T", err)
-			log.Printf("rfifo errno error: %v", err)
+		log.Printf("rfifo errno error: %T", err)
+		log.Printf("rfifo errno error: %v", err)
 	} else {
 		log.Println("rfifo close")
 		rfifo.Close()
