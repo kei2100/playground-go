@@ -127,4 +127,21 @@ Key:key3 Value:value3
 			t.Errorf("got '%v', want '%v'", g, w)
 		}
 	})
+
+	t.Run("with", func(t *testing.T) {
+		ts := strings.TrimSpace(`
+{{with .Message}}
+print {{.}}
+{{end}}
+`)
+		tmpl, _ = template.New("t").Parse(ts)
+		b = &bytes.Buffer{}
+		tmpl.Execute(b, map[string]string{
+			"Message": "Hello",
+		})
+
+		if g, w := strings.TrimSpace(b.String()), "print Hello"; g != w {
+			t.Errorf("got '%v', want '%v'", g, w)
+		}
+	})
 }
