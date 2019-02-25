@@ -8,6 +8,7 @@ import (
 )
 
 func TestSMB(t *testing.T) {
+	t.SkipNow()
 
 	host := "192.168.100.21"
 	options := smb.Options{
