@@ -2,9 +2,11 @@ package template
 
 import (
 	"bytes"
+	"log"
 	"strings"
 	"testing"
 	"text/template"
+	"time"
 )
 
 // - テンプレートへのインプットはUTF-8のテキスト
@@ -125,8 +127,41 @@ print {{.}}
 	})
 }
 
-func TestArguments(t *testing.T) {
+// MyStruct struct
+type MyStruct struct {
+}
 
+// https://golang.org/pkg/text/template/#hdr-Arguments
+// method must have one return value (of any type) or two return values, the second of which is an error.
+func (s *MyStruct) Do() string {
+	return "do!!!!"
+}
+
+func TestArguments(t *testing.T) {
+	t.Run("nameless variable", func(t *testing.T) {
+		tmpl := mustParse(t, "{{ $ := 100}}{{ $ }}")
+		result := mustExecute(t, tmpl, nil)
+		if g, w := result, "100"; g != w {
+			t.Errorf("got %v, want %v", g, w)
+		}
+	})
+
+	t.Run("invoke method", func(t *testing.T) {
+		tmpl := mustParse(t, "{{ .Do }}")
+		result := mustExecute(t, tmpl, &MyStruct{})
+		if g, w := result, "do!!!!"; g != w {
+			t.Errorf("got %v, want %v", g, w)
+		}
+	})
+
+	t.Run("invoke function", func(t *testing.T) {
+		fm := template.FuncMap{
+			"unix": func() int { return int(time.Now().Unix()) },
+		}
+		tmpl, _ := template.New("test").Funcs(fm).Parse("{{ unix }}")
+		result := mustExecute(t, tmpl, nil)
+		log.Println(result)
+	})
 }
 
 func mustParse(t *testing.T, text string) *template.Template {
