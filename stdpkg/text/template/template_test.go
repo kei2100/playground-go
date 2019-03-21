@@ -164,6 +164,16 @@ func TestArguments(t *testing.T) {
 	})
 }
 
+func TestPipelines(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		tmpl := mustParse(t, "{{ .foo | println }}")
+		result := mustExecute(t, tmpl, map[string]string{"foo": "bar"})
+		if g, w := result, "bar\n"; g != w {
+			t.Errorf("got %v, want %v", g, w)
+		}
+	})
+}
+
 func mustParse(t *testing.T, text string) *template.Template {
 	t.Helper()
 	tmpl := template.New("test")
