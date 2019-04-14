@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -55,33 +54,28 @@ func ReceiveStructContext(ctx context.Context, ch <-chan struct{}) error {
 	}
 }
 
-// TODO interval持てるように変える
 // Condition continuously calls the condition function until it returns true.
 // When timeout exceeded while waiting for it, return an error.
-func Condition(condition func() bool, timeout time.Duration) error {
+func Condition(interval, timeout time.Duration, condition func() bool) error {
 	if timeout == 0 {
 		return errors.New("wait: timeout must be greater than zero")
 	}
 	ctx, can := context.WithTimeout(context.Background(), timeout)
 	defer can()
-	return ConditionContext(ctx, condition)
+	return ConditionContext(ctx, interval, condition)
 }
 
-// TODO Goschedの妥当性
 // ConditionContext continuously calls the condition function until it returns true.
 // When the context timeout exceeded, return an error.
-func ConditionContext(ctx context.Context, condition func() bool) error {
-	ticker := time.NewTicker(time.Millisecond)
-	defer ticker.Stop()
+func ConditionContext(ctx context.Context, interval time.Duration, condition func() bool) error {
 	for {
 		select {
-		case <-ticker.C:
+		case <-time.After(interval):
 			if condition() {
 				return nil
 			}
 		case <-ctx.Done():
 			return fmt.Errorf("wait: %v", ctx.Err())
 		}
-		runtime.Gosched()
 	}
 }

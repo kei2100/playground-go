@@ -64,13 +64,13 @@ func TestCondition(t *testing.T) {
 			}
 			return true
 		}
-		if err := Condition(fn, 50*time.Millisecond); err != nil {
+		if err := Condition(100*time.Millisecond, time.Second, fn); err != nil {
 			t.Errorf("got %v, want no error", err)
 		}
 	})
 	t.Run("timeout", func(t *testing.T) {
 		fn := func() bool { return false }
-		if err := Condition(fn, 50*time.Millisecond); err == nil {
+		if err := Condition(100*time.Millisecond, time.Second, fn); err == nil {
 			t.Error("got nil, want an error")
 		}
 	})

@@ -72,7 +72,7 @@ func TestTCPServer_Close(t *testing.T) {
 	ln := mustTCPListen(t)
 	s := new(Server)
 	go s.Serve(ln, func(conn net.Conn) {})
-	if err := wait.Condition(s.IsListening, 3*time.Second); err != nil {
+	if err := wait.Condition(100*time.Millisecond, 3*time.Second, s.IsListening); err != nil {
 		t.Fatal("timeout exceeded while waiting for serv listening")
 	}
 
@@ -83,7 +83,7 @@ func TestTCPServer_Close(t *testing.T) {
 	if err := s.Close(); err != nil {
 		t.Error(err)
 	}
-	if err := wait.Condition(s.IsClosed, 3*time.Second); err != nil {
+	if err := wait.Condition(100*time.Millisecond, 3*time.Second, s.IsClosed); err != nil {
 		t.Fatal("timeout exceeded while waiting for serv listening")
 	}
 	if _, err := net.Dial("tcp", ln.Addr().String()); err == nil {
@@ -235,7 +235,7 @@ func TestTCPServer_DoubleClose(t *testing.T) {
 		s.Serve(ln, nopTCPHandler)
 		close(done)
 	}()
-	if err := wait.Condition(s.IsListening, 3*time.Second); err != nil {
+	if err := wait.Condition(100*time.Millisecond, 3*time.Second, s.IsListening); err != nil {
 		t.Fatal("timeout exceeded while waiting for serv listening")
 	}
 
