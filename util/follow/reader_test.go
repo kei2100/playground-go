@@ -1,4 +1,4 @@
-package tailf
+package follow
 
 import (
 	"io/ioutil"
@@ -27,7 +27,7 @@ func TestNoPositionFile(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	fw := fwi.(*follower)
+	fw := fwi.(*reader)
 	fw.detectRotateDelay = 100 * time.Millisecond
 
 	testRead(t, fw, logFile, 0)
@@ -45,7 +45,7 @@ func TestNoPositionFile(t *testing.T) {
 	})
 }
 
-func testDetectRotate(t *testing.T, follower *follower, timeout time.Duration) {
+func testDetectRotate(t *testing.T, follower *reader, timeout time.Duration) {
 	t.Helper()
 
 	select {
@@ -56,7 +56,7 @@ func testDetectRotate(t *testing.T, follower *follower, timeout time.Duration) {
 	}
 }
 
-func testRead(t *testing.T, follower *follower, logFile *os.File, offset int64) {
+func testRead(t *testing.T, follower *reader, logFile *os.File, offset int64) {
 	t.Helper()
 
 	// write foo

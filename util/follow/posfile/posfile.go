@@ -4,12 +4,17 @@ import (
 	"os"
 )
 
+// PositionFile interface
 type PositionFile interface {
+	// Update updates fileInfo and offset
 	Update(fileInfo os.FileInfo, offset int64)
+	// Offset returns offset value
 	Offset() int64
+	// IncreaseOffset increases offset value
 	IncreaseOffset(incr int)
 }
 
+// NewMemoryPositionFile creates a memoryPositionFile
 func NewMemoryPositionFile(fileInfo os.FileInfo, offset int64) PositionFile {
 	return &memoryPositionFile{fileInfo: fileInfo, offset: offset}
 }
