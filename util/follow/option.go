@@ -23,3 +23,17 @@ func (o *option) apply(opts ...OptionFunc) {
 		fn(o)
 	}
 }
+
+// WithWatchRotateInterval let you change watchRotateInterval
+func WithWatchRotateInterval(v time.Duration) OptionFunc {
+	return func(o *option) {
+		o.watchRotateInterval = v
+	}
+}
+
+// WithDetectRotateDelay let you change detectRotateDelay
+func WithDetectRotateDelay(v time.Duration) OptionFunc {
+	return func(o *option) {
+		o.detectRotateDelay = v
+	}
+}

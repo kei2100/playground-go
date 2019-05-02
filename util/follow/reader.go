@@ -30,12 +30,16 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 		if err != nil {
 			return nil, err
 		}
+		closed := make(chan struct{})
+		watchRotateInterval := opt.watchRotateInterval
+		detectRotateDelay := opt.detectRotateDelay
 		return &reader{
 			file:                f,
 			positionFile:        posfile.NewMemoryPositionFile(fi, 0),
-			watchRotateInterval: opt.watchRotateInterval,
-			detectRotateDelay:   opt.detectRotateDelay,
-			closed:              make(chan struct{}),
+			watchRotateInterval: watchRotateInterval,
+			detectRotateDelay:   detectRotateDelay,
+			closed:              closed,
+			rotated:             watchRotate(closed, f, watchRotateInterval, detectRotateDelay),
 		}, nil
 	}
 	// TODO
@@ -57,9 +61,6 @@ type reader struct {
 func (r *reader) Read(p []byte) (n int, err error) {
 	select {
 	default:
-		if r.rotated == nil {
-			r.rotated = watchRotate(r.closed, r.file, r.watchRotateInterval, r.detectRotateDelay)
-		}
 		n, err := r.file.Read(p)
 		r.positionFile.IncreaseOffset(n)
 		return n, err

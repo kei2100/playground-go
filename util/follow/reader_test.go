@@ -9,125 +9,114 @@ import (
 )
 
 func TestNoPositionFile(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "tailf")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	defer os.RemoveAll(tempDir)
+	t.Run("Glow", func(t *testing.T) {
+		ds, teardown := setup()
+		defer teardown()
 
-	logFile, err := os.OpenFile(filepath.Join(tempDir, "test.log"), os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+		ds.logFile.WriteString("foo")
+		wantRead(t, ds.reader, "fo")
+		wantRead(t, ds.reader, "o")
+		wantReadAll(t, ds.reader, "")
 
-	fwi, err := Open(logFile.Name())
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	fw := fwi.(*reader)
-	fw.detectRotateDelay = 100 * time.Millisecond
+		ds.logFile.WriteString("bar")
+		wantReadAll(t, ds.reader, "bar")
+	})
 
-	testRead(t, fw, logFile, 0)
+	t.Run("Rotate", func(t *testing.T) {
+		ds, teardown := setup(WithWatchRotateInterval(200*time.Millisecond), WithDetectRotateDelay(0))
+		defer teardown()
 
-	t.Run("logFile was rotated", func(t *testing.T) {
-		logFile.Close()
-		os.Rename(logFile.Name(), logFile.Name()+".1")
-		logFile, err = os.OpenFile(filepath.Join(tempDir, "test.log"), os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		testDetectRotate(t, fw, time.Second)
-		testRead(t, fw, logFile, 0)
+		rotateLogFile(ds.logFile)
+		wantDetectRotate(t, ds.reader, time.Second)
+
+		ds.logFile.WriteString("foo")
+		wantReadAll(t, ds.reader, "foo")
 	})
 }
 
-func testDetectRotate(t *testing.T, follower *reader, timeout time.Duration) {
+type dataset struct {
+	logFile *os.File
+	reader  *reader
+}
+
+func rotateLogFile(logFile *os.File) {
+	logFile.Close()
+	if err := os.Rename(logFile.Name(), logFile.Name()+".1"); err != nil {
+		panic(err)
+	}
+	newLogFile, err := os.OpenFile(logFile.Name(), os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
+	}
+	*logFile = *newLogFile
+}
+
+func setup(opts ...OptionFunc) (ds *dataset, teardown func()) {
+	tempDir, err := ioutil.TempDir("", "follow-")
+	if err != nil {
+		panic(err)
+	}
+	logFile, err := os.OpenFile(filepath.Join(tempDir, "test.log"), os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
+	}
+	r, err := Open(logFile.Name(), opts...)
+	if err != nil {
+		panic(err)
+	}
+	reader, ok := r.(*reader)
+	if !ok {
+		panic("failed to cast")
+	}
+
+	teardown = func() {
+		logFile.Close()
+		reader.Close()
+		os.RemoveAll(tempDir)
+	}
+	return &dataset{logFile: logFile, reader: reader}, teardown
+}
+
+func wantRead(t *testing.T, reader Reader, want string) {
 	t.Helper()
 
-	select {
-	case <-follower.rotated:
+	b := make([]byte, len(want))
+	n, err := reader.Read(b)
+	if err != nil {
+		t.Errorf("failed to read: %v", err)
 		return
-	case <-time.After(timeout):
-		t.Errorf("%s timeout while waiting for detect rotate", timeout)
+	}
+	if g, w := n, len(b); g != w {
+		t.Errorf("nReadBytes got %v, want %v", g, w)
+	}
+	if g, w := string(b), want; g != w {
+		t.Errorf("byteString got %v, want %v", g, w)
 	}
 }
 
-func testRead(t *testing.T, follower *reader, logFile *os.File, offset int64) {
+func wantReadAll(t *testing.T, reader *reader, want string) {
 	t.Helper()
 
-	// write foo
-	_, err := logFile.WriteString("foo")
+	b, err := ioutil.ReadAll(reader)
 	if err != nil {
-		t.Errorf("write foo: %v", err)
+		t.Errorf("failed to read all: %v", err)
+		return
 	}
+	if g, w := len(b), len(want); g != w {
+		t.Errorf("nReadBytes got %v, want %v", g, w)
+	}
+	if g, w := string(b), want; g != w {
+		t.Errorf("byteString got %v, want %v", g, w)
+	}
+}
 
-	// read 2 bytes
-	b := make([]byte, 2)
-	n, err := follower.Read(b)
-	if err != nil {
-		t.Errorf("read fo: %v", err)
-	}
-	if g, w := n, 2; g != w {
-		t.Errorf("read fo: n read bytes got %v, want %v", g, w)
-	}
-	if g, w := follower.positionFile.Offset(), offset+2; g != w {
-		t.Errorf("read fo: offset got %v, want %v", g, w)
-	}
-	if g, w := string(b), "fo"; g != w {
-		t.Errorf("read fo: byteString got %v, want %v", g, w)
-	}
+func wantDetectRotate(t *testing.T, reader *reader, timeout time.Duration) {
+	t.Helper()
 
-	// read 2 bytes
-	b = make([]byte, 2)
-	n, err = follower.Read(b)
-	if err != nil {
-		t.Errorf("read o: %v", err)
-	}
-	if g, w := n, 1; g != w {
-		t.Errorf("read o: n read bytes got %v, want %v", g, w)
-	}
-	if g, w := follower.positionFile.Offset(), offset+3; g != w {
-		t.Errorf("read o: offset got %v, want %v", g, w)
-	}
-	if g, w := string(b[:1]), "o"; g != w {
-		t.Errorf("read o: byteString got %v, want %v", g, w)
-	}
-
-	// append bar
-	_, err = logFile.WriteString("bar")
-	if err != nil {
-		t.Errorf("write bar: %v", err)
-	}
-
-	// read 2 bytes
-	b = make([]byte, 2)
-	n, err = follower.Read(b)
-	if err != nil {
-		t.Errorf("read ba: %v", err)
-	}
-	if g, w := n, 2; g != w {
-		t.Errorf("read ba: n read bytes got %v, want %v", g, w)
-	}
-	if g, w := follower.positionFile.Offset(), offset+5; g != w {
-		t.Errorf("read ba: offset got %v, want %v", g, w)
-	}
-	if g, w := string(b), "ba"; g != w {
-		t.Errorf("read ba: byteString got %v, want %v", g, w)
-	}
-
-	// read all
-	b, err = ioutil.ReadAll(follower)
-	if err != nil {
-		t.Errorf("read all: %v", err)
-	}
-	if g, w := follower.positionFile.Offset(), offset+6; g != w {
-		t.Errorf("read all: offset got %v, want %v", g, w)
-	}
-	if g, w := string(b), "r"; g != w {
-		t.Errorf("read all: byteString got %v, want %v", g, w)
+	select {
+	case <-reader.rotated:
+		return
+	case <-time.After(timeout):
+		t.Errorf("%s timeout while waiting for detect rotate", timeout)
 	}
 }
