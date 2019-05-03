@@ -10,6 +10,8 @@ import (
 
 func TestNoPositionFile(t *testing.T) {
 	t.Run("Glow", func(t *testing.T) {
+		t.Parallel()
+
 		ds, teardown := setup()
 		defer teardown()
 
@@ -22,15 +24,43 @@ func TestNoPositionFile(t *testing.T) {
 		wantReadAll(t, ds.reader, "bar")
 	})
 
-	t.Run("Rotate", func(t *testing.T) {
-		ds, teardown := setup(WithWatchRotateInterval(200*time.Millisecond), WithDetectRotateDelay(0))
+	t.Run("Follow Rotate", func(t *testing.T) {
+		t.Parallel()
+
+		ds, teardown := setup(WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(0))
 		defer teardown()
 
 		rotateLogFile(ds.logFile)
-		wantDetectRotate(t, ds.reader, time.Second)
-
+		wantDetectRotate(t, ds.reader, 500*time.Millisecond)
 		ds.logFile.WriteString("foo")
 		wantReadAll(t, ds.reader, "foo")
+	})
+
+	t.Run("No Follow Rotate", func(t *testing.T) {
+		t.Parallel()
+
+		ds, teardown := setup(WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(0), WithFollowRotate(false))
+		defer teardown()
+
+		rotateLogFile(ds.logFile)
+		wantNoDetectRotate(t, ds.reader, 500*time.Millisecond)
+		ds.logFile.WriteString("foo")
+		wantReadAll(t, ds.reader, "")
+	})
+
+	t.Run("Follow Rotate DetectRotateDelay", func(t *testing.T) {
+		t.Parallel()
+
+		ds, teardown := setup(WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(500*time.Millisecond))
+		defer teardown()
+
+		ds.logFile.WriteString("foo")
+		rotateLogFile(ds.logFile)
+		wantReadAll(t, ds.reader, "foo")
+
+		wantDetectRotate(t, ds.reader, time.Second)
+		ds.logFile.WriteString("bar")
+		wantReadAll(t, ds.reader, "bar")
 	})
 }
 
@@ -118,5 +148,16 @@ func wantDetectRotate(t *testing.T, reader *reader, timeout time.Duration) {
 		return
 	case <-time.After(timeout):
 		t.Errorf("%s timeout while waiting for detect rotate", timeout)
+	}
+}
+
+func wantNoDetectRotate(t *testing.T, reader *reader, wait time.Duration) {
+	t.Helper()
+
+	select {
+	case <-reader.rotated:
+		t.Errorf("detect rotate. want not detect")
+	case <-time.After(wait):
+		return
 	}
 }

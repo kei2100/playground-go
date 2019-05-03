@@ -9,14 +9,16 @@ import (
 type option struct {
 	positionFile posfile.PositionFile
 	//rotatedFilePathPattern string
-	watchRotateInterval time.Duration
+	followRotate        bool
 	detectRotateDelay   time.Duration
+	watchRotateInterval time.Duration
 }
 
 // OptionFunc let you change follow.Reader behavior.
 type OptionFunc func(o *option)
 
 func (o *option) apply(opts ...OptionFunc) {
+	o.followRotate = true
 	o.watchRotateInterval = 200 * time.Millisecond
 	o.detectRotateDelay = 5 * time.Second
 	for _, fn := range opts {
@@ -24,10 +26,10 @@ func (o *option) apply(opts ...OptionFunc) {
 	}
 }
 
-// WithWatchRotateInterval let you change watchRotateInterval
-func WithWatchRotateInterval(v time.Duration) OptionFunc {
+// WithFollowRotate let you change followRotate
+func WithFollowRotate(follow bool) OptionFunc {
 	return func(o *option) {
-		o.watchRotateInterval = v
+		o.followRotate = follow
 	}
 }
 
@@ -35,5 +37,12 @@ func WithWatchRotateInterval(v time.Duration) OptionFunc {
 func WithDetectRotateDelay(v time.Duration) OptionFunc {
 	return func(o *option) {
 		o.detectRotateDelay = v
+	}
+}
+
+// WithWatchRotateInterval let you change watchRotateInterval
+func WithWatchRotateInterval(v time.Duration) OptionFunc {
+	return func(o *option) {
+		o.watchRotateInterval = v
 	}
 }

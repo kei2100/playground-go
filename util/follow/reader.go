@@ -33,13 +33,17 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 		closed := make(chan struct{})
 		watchRotateInterval := opt.watchRotateInterval
 		detectRotateDelay := opt.detectRotateDelay
+		var rotated <-chan struct{}
+		if opt.followRotate {
+			rotated = watchRotate(closed, f, watchRotateInterval, detectRotateDelay)
+		}
 		return &reader{
 			file:                f,
 			positionFile:        posfile.NewMemoryPositionFile(fi, 0),
 			watchRotateInterval: watchRotateInterval,
 			detectRotateDelay:   detectRotateDelay,
 			closed:              closed,
-			rotated:             watchRotate(closed, f, watchRotateInterval, detectRotateDelay),
+			rotated:             rotated,
 		}, nil
 	}
 	// TODO
