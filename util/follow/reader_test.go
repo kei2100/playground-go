@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/kei2100/playground-go/util/follow/file"
 )
 
 func TestNoPositionFile(t *testing.T) {
@@ -17,11 +19,15 @@ func TestNoPositionFile(t *testing.T) {
 
 		ds.logFile.WriteString("foo")
 		wantRead(t, ds.reader, "fo")
+		wantPositionFile(t, ds.reader, ds.logFile, 2)
+
 		wantRead(t, ds.reader, "o")
 		wantReadAll(t, ds.reader, "")
+		wantPositionFile(t, ds.reader, ds.logFile, 3)
 
 		ds.logFile.WriteString("bar")
 		wantReadAll(t, ds.reader, "bar")
+		wantPositionFile(t, ds.reader, ds.logFile, 6)
 	})
 
 	t.Run("Follow Rotate", func(t *testing.T) {
@@ -32,8 +38,10 @@ func TestNoPositionFile(t *testing.T) {
 
 		rotateLogFile(ds.logFile)
 		wantDetectRotate(t, ds.reader, 500*time.Millisecond)
+
 		ds.logFile.WriteString("foo")
 		wantReadAll(t, ds.reader, "foo")
+		wantPositionFile(t, ds.reader, ds.logFile, 3)
 	})
 
 	t.Run("No Follow Rotate", func(t *testing.T) {
@@ -42,10 +50,19 @@ func TestNoPositionFile(t *testing.T) {
 		ds, teardown := setup(WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(0), WithFollowRotate(false))
 		defer teardown()
 
+		bkLogFile, err := file.Open(ds.logFile.Name())
+		if err != nil {
+			t.Errorf("failed to open %v", ds.logFile.Name())
+			return
+		}
+		defer bkLogFile.Close()
+
 		rotateLogFile(ds.logFile)
 		wantNoDetectRotate(t, ds.reader, 500*time.Millisecond)
+
 		ds.logFile.WriteString("foo")
 		wantReadAll(t, ds.reader, "")
+		wantPositionFile(t, ds.reader, bkLogFile, 0)
 	})
 
 	t.Run("Follow Rotate DetectRotateDelay", func(t *testing.T) {
@@ -54,15 +71,31 @@ func TestNoPositionFile(t *testing.T) {
 		ds, teardown := setup(WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(500*time.Millisecond))
 		defer teardown()
 
+		bkLogFile, err := file.Open(ds.logFile.Name())
+		if err != nil {
+			t.Errorf("failed to open %v", ds.logFile.Name())
+			return
+		}
+		defer bkLogFile.Close()
+
 		ds.logFile.WriteString("foo")
 		rotateLogFile(ds.logFile)
 		wantReadAll(t, ds.reader, "foo")
+		wantPositionFile(t, ds.reader, bkLogFile, 3)
 
 		wantDetectRotate(t, ds.reader, time.Second)
 		ds.logFile.WriteString("bar")
 		wantReadAll(t, ds.reader, "bar")
+		wantPositionFile(t, ds.reader, ds.logFile, 3)
 	})
 }
+
+func TestWithPositionFile(t *testing.T) {
+
+}
+
+// positionfile
+// positionfile nosame
 
 type dataset struct {
 	logFile *os.File
@@ -107,7 +140,23 @@ func setup(opts ...OptionFunc) (ds *dataset, teardown func()) {
 	return &dataset{logFile: logFile, reader: reader}, teardown
 }
 
-func wantRead(t *testing.T, reader Reader, want string) {
+func wantPositionFile(t *testing.T, reader *reader, wantFileInfoFile *os.File, wantOffset int64) {
+	t.Helper()
+
+	wantFileInfo, err := wantFileInfoFile.Stat()
+	if err != nil {
+		t.Errorf("failed to get fileInfo: %v", err)
+		return
+	}
+	if !os.SameFile(reader.positionFile.FileInfo(), wantFileInfo) {
+		t.Errorf("fileInfo not same")
+	}
+	if g, w := reader.positionFile.Offset(), wantOffset; g != w {
+		t.Errorf("offset got %v, want %v", g, w)
+	}
+}
+
+func wantRead(t *testing.T, reader *reader, want string) {
 	t.Helper()
 
 	b := make([]byte, len(want))
