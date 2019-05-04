@@ -29,6 +29,11 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 		if cErr := f.Close(); cErr != nil {
 			logger.Printf("follow: an error occurred while closing the file %s: %+v", name, cErr)
 		}
+		if opt.positionFile != nil {
+			if cErr := opt.positionFile.Close(); cErr != nil {
+				logger.Printf("follow: an error occurred while closing the positionFile: %+v", cErr)
+			}
+		}
 		return nil, err
 	}
 	fileInfo, err := f.Stat()
@@ -37,8 +42,12 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 	}
 
 	if opt.positionFile == nil {
-		positionFile := posfile.NewMemoryPositionFile(fileInfo, 0)
+		positionFile := posfile.InMemory(fileInfo, 0)
 		return newReader(f, positionFile, opt), nil
+	}
+	if opt.positionFile.FileInfo() == nil {
+		opt.positionFile.Update(fileInfo, 0)
+		return newReader(f, opt.positionFile, opt), nil
 	}
 	if !os.SameFile(fileInfo, opt.positionFile.FileInfo()) {
 		logger.Printf("follow: file not found that matches fileInfo of the positionFile %+v. reset positionFile.", opt.positionFile.FileInfo())
@@ -120,6 +129,9 @@ func (r *reader) Read(p []byte) (n int, err error) {
 func (r *reader) Close() error {
 	if r.closed != nil {
 		close(r.closed)
+	}
+	if err := r.positionFile.Close(); err != nil {
+		logger.Printf("follow: an error occurred while closing the positionFile: %+v", err)
 	}
 	if err := r.file.Close(); err != nil {
 		return err

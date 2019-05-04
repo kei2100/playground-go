@@ -97,7 +97,7 @@ func TestWithPositionFile(t *testing.T) {
 
 		logFile, fileInfo := createLogFile()
 		logFile.WriteString("bar")
-		positionFile := posfile.NewMemoryPositionFile(fileInfo, 2)
+		positionFile := posfile.InMemory(fileInfo, 2)
 		ds, teardown := setupWithLogFile(logFile, WithPositionFile(positionFile))
 		defer teardown()
 
@@ -114,7 +114,7 @@ func TestWithPositionFile(t *testing.T) {
 
 		logFile, fileInfo := createLogFile()
 		logFile.WriteString("bar")
-		positionFile := posfile.NewMemoryPositionFile(fileInfo, 4)
+		positionFile := posfile.InMemory(fileInfo, 4)
 		ds, teardown := setupWithLogFile(logFile, WithPositionFile(positionFile))
 		defer teardown()
 
@@ -133,7 +133,7 @@ func TestWithPositionFile(t *testing.T) {
 		logFile.WriteString("bar")
 		rotateLogFile(logFile)
 
-		positionFile := posfile.NewMemoryPositionFile(fileInfo, 2)
+		positionFile := posfile.InMemory(fileInfo, 2)
 		newLogFile, err := os.OpenFile(filepath.Join(filepath.Dir(logFile.Name()), fileInfo.Name()), os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
 			panic(err)
