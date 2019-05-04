@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/kei2100/playground-go/util/follow/file"
@@ -126,35 +125,6 @@ func (r *reader) Close() error {
 		return err
 	}
 	return nil
-}
-
-func findAndOpenSameFile(fileInfo os.FileInfo, pathPattern string) (*os.File, error) {
-	entries, err := filepath.Glob(pathPattern)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range entries {
-		candidateInfo, err := os.Stat(p)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return nil, err
-		}
-		if !os.SameFile(candidateInfo, fileInfo) {
-			continue
-		}
-		sameFile, err := file.Open(p)
-		if err != nil {
-			if os.IsNotExist(err) {
-				// sameFile renamed?
-				continue
-			}
-			return nil, err
-		}
-		return sameFile, nil
-	}
-	return nil, os.ErrNotExist
 }
 
 func watchRotate(done chan struct{}, file *os.File, interval, notifyDelay time.Duration) (rotated <-chan struct{}) {
