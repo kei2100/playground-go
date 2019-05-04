@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kei2100/playground-go/util/follow/file"
+	"github.com/kei2100/playground-go/util/follow/posfile"
 )
 
 func TestNoPositionFile(t *testing.T) {
@@ -91,15 +92,85 @@ func TestNoPositionFile(t *testing.T) {
 }
 
 func TestWithPositionFile(t *testing.T) {
+	t.Run("Works", func(t *testing.T) {
+		t.Parallel()
 
+		logFile, fileInfo := createLogFile()
+		logFile.WriteString("bar")
+		positionFile := posfile.NewMemoryPositionFile(fileInfo, 2)
+		ds, teardown := setupWithLogFile(logFile, WithPositionFile(positionFile))
+		defer teardown()
+
+		wantReadAll(t, ds.reader, "r")
+		wantPositionFile(t, ds.reader, ds.logFile, 3)
+
+		ds.logFile.WriteString("baz")
+		wantReadAll(t, ds.reader, "baz")
+		wantPositionFile(t, ds.reader, ds.logFile, 6)
+	})
+
+	t.Run("Incorrect offset", func(t *testing.T) {
+		t.Parallel()
+
+		logFile, fileInfo := createLogFile()
+		logFile.WriteString("bar")
+		positionFile := posfile.NewMemoryPositionFile(fileInfo, 4)
+		ds, teardown := setupWithLogFile(logFile, WithPositionFile(positionFile))
+		defer teardown()
+
+		wantReadAll(t, ds.reader, "")
+		wantPositionFile(t, ds.reader, ds.logFile, 3)
+
+		ds.logFile.WriteString("baz")
+		wantReadAll(t, ds.reader, "baz")
+		wantPositionFile(t, ds.reader, ds.logFile, 6)
+	})
+
+	t.Run("Same file not found", func(t *testing.T) {
+		t.Parallel()
+
+		logFile, fileInfo := createLogFile()
+		logFile.WriteString("bar")
+		rotateLogFile(logFile)
+
+		positionFile := posfile.NewMemoryPositionFile(fileInfo, 2)
+		newLogFile, err := os.OpenFile(filepath.Join(filepath.Dir(logFile.Name()), fileInfo.Name()), os.O_CREATE|os.O_WRONLY, 0600)
+		if err != nil {
+			panic(err)
+		}
+		ds, teardown := setupWithLogFile(newLogFile, WithPositionFile(positionFile))
+		defer teardown()
+
+		wantReadAll(t, ds.reader, "")
+		wantPositionFile(t, ds.reader, ds.logFile, 0)
+
+		ds.logFile.WriteString("baz")
+		wantReadAll(t, ds.reader, "baz")
+		wantPositionFile(t, ds.reader, ds.logFile, 3)
+	})
 }
 
-// positionfile
-// positionfile nosame
+// use saved positionfile
 
 type dataset struct {
 	logFile *os.File
 	reader  *reader
+}
+
+func createLogFile() (*os.File, os.FileInfo) {
+	tempDir, err := ioutil.TempDir("", "follow-")
+	if err != nil {
+		panic(err)
+	}
+	logFile, err := os.OpenFile(filepath.Join(tempDir, "test.log"), os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
+	}
+	fileInfo, err := logFile.Stat()
+	if err != nil {
+		panic(err)
+	}
+	return logFile, fileInfo
 }
 
 func rotateLogFile(logFile *os.File) {
@@ -115,14 +186,11 @@ func rotateLogFile(logFile *os.File) {
 }
 
 func setup(opts ...OptionFunc) (ds *dataset, teardown func()) {
-	tempDir, err := ioutil.TempDir("", "follow-")
-	if err != nil {
-		panic(err)
-	}
-	logFile, err := os.OpenFile(filepath.Join(tempDir, "test.log"), os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		panic(err)
-	}
+	logFile, _ := createLogFile()
+	return setupWithLogFile(logFile, opts...)
+}
+
+func setupWithLogFile(logFile *os.File, opts ...OptionFunc) (ds *dataset, teardown func()) {
 	r, err := Open(logFile.Name(), opts...)
 	if err != nil {
 		panic(err)
@@ -135,7 +203,8 @@ func setup(opts ...OptionFunc) (ds *dataset, teardown func()) {
 	teardown = func() {
 		logFile.Close()
 		reader.Close()
-		os.RemoveAll(tempDir)
+		os.Remove(logFile.Name())
+		os.Remove(logFile.Name() + ".1") // See rotateLogFile(*os.File)
 	}
 	return &dataset{logFile: logFile, reader: reader}, teardown
 }

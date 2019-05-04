@@ -7,10 +7,9 @@ import (
 )
 
 type option struct {
-	positionFile posfile.PositionFile
-	//rotatedFilePathPattern string
-	followRotate        bool
 	detectRotateDelay   time.Duration
+	followRotate        bool
+	positionFile        posfile.PositionFile
 	watchRotateInterval time.Duration
 }
 
@@ -26,6 +25,13 @@ func (o *option) apply(opts ...OptionFunc) {
 	}
 }
 
+// WithDetectRotateDelay let you change detectRotateDelay
+func WithDetectRotateDelay(v time.Duration) OptionFunc {
+	return func(o *option) {
+		o.detectRotateDelay = v
+	}
+}
+
 // WithFollowRotate let you change followRotate
 func WithFollowRotate(follow bool) OptionFunc {
 	return func(o *option) {
@@ -33,10 +39,10 @@ func WithFollowRotate(follow bool) OptionFunc {
 	}
 }
 
-// WithDetectRotateDelay let you change detectRotateDelay
-func WithDetectRotateDelay(v time.Duration) OptionFunc {
+// WithPositionFile let you change positionFile
+func WithPositionFile(positionFile posfile.PositionFile) OptionFunc {
 	return func(o *option) {
-		o.detectRotateDelay = v
+		o.positionFile = positionFile
 	}
 }
 
