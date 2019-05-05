@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/kei2100/playground-go/util/follow/stat"
+
 	"github.com/kei2100/playground-go/util/follow/file"
 	"github.com/kei2100/playground-go/util/follow/logger"
 	"github.com/kei2100/playground-go/util/follow/posfile"
@@ -25,6 +27,7 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	errAndClose := func(err error) (Reader, error) {
 		if cErr := f.Close(); cErr != nil {
 			logger.Printf("follow: an error occurred while closing the file %s: %+v", name, cErr)
@@ -36,28 +39,34 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 		}
 		return nil, err
 	}
+
+	fileStat, err := stat.Stat(f)
+	if err != nil {
+		return errAndClose(err)
+	}
 	fileInfo, err := f.Stat()
 	if err != nil {
 		return errAndClose(err)
 	}
 
 	if opt.positionFile == nil {
-		positionFile := posfile.InMemory(fileInfo, 0)
+		positionFile := posfile.InMemory(fileStat, 0)
 		return newReader(f, positionFile, opt), nil
 	}
-	if opt.positionFile.FileInfo() == nil {
-		opt.positionFile.Update(fileInfo, 0)
+	if opt.positionFile.FileStat() == nil {
+		opt.positionFile.Update(fileStat, 0)
 		return newReader(f, opt.positionFile, opt), nil
 	}
-	if !os.SameFile(fileInfo, opt.positionFile.FileInfo()) {
-		logger.Printf("follow: file not found that matches fileInfo of the positionFile %+v. reset positionFile.", opt.positionFile.FileInfo())
-		opt.positionFile.Update(fileInfo, 0)
+	if !stat.SameFile(fileStat, opt.positionFile.FileStat()) {
+		logger.Printf("follow: file not found that matches fileStat of the positionFile %+v. reset positionFile.", opt.positionFile.FileStat())
+		opt.positionFile.Update(fileStat, 0)
 		return newReader(f, opt.positionFile, opt), nil
 	}
+
 	if fileInfo.Size() < opt.positionFile.Offset() {
 		// consider file truncated
 		logger.Printf("follow: incorrect positionFile offset %d. file size %d. reset offset to %d.", opt.positionFile.Offset(), fileInfo.Size(), fileInfo.Size())
-		opt.positionFile.Update(fileInfo, fileInfo.Size())
+		opt.positionFile.Update(fileStat, fileInfo.Size())
 	}
 	offset, err := f.Seek(opt.positionFile.Offset(), 0)
 	if err != nil {
@@ -114,12 +123,12 @@ func (r *reader) Read(p []byte) (n int, err error) {
 		if err != nil {
 			return 0, err
 		}
-		fi, err := f.Stat()
+		st, err := stat.Stat(f)
 		if err != nil {
 			return 0, err
 		}
 		r.file = f
-		r.positionFile.Update(fi, 0)
+		r.positionFile.Update(st, 0)
 		r.rotated = watchRotate(r.closed, r.file, r.watchRotateInterval, r.detectRotateDelay)
 		return r.Read(p)
 	}
@@ -152,7 +161,7 @@ func watchRotate(done chan struct{}, file *os.File, interval, notifyDelay time.D
 			case <-tick.C:
 				fileInfo, err := file.Stat()
 				if err != nil {
-					logger.Printf("follow: failed to get FileInfo %s on watchRotate: %+v", file.Name(), err)
+					logger.Printf("follow: failed to get FileStat %s on watchRotate: %+v", file.Name(), err)
 					continue
 				}
 				currentInfo, err := os.Stat(file.Name())
@@ -160,7 +169,7 @@ func watchRotate(done chan struct{}, file *os.File, interval, notifyDelay time.D
 					if os.IsNotExist(err) {
 						continue
 					}
-					logger.Printf("follow: failed to get current FileInfo %s on watchRotate: %+v", file.Name(), err)
+					logger.Printf("follow: failed to get current FileStat %s on watchRotate: %+v", file.Name(), err)
 					continue
 				}
 				if !os.SameFile(fileInfo, currentInfo) {

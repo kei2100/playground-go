@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kei2100/playground-go/util/follow/stat"
+
 	"github.com/kei2100/playground-go/util/follow/file"
 	"github.com/kei2100/playground-go/util/follow/posfile"
 )
@@ -20,15 +22,15 @@ func TestNoPositionFile(t *testing.T) {
 
 		ds.logFile.WriteString("foo")
 		wantRead(t, ds.reader, "fo")
-		wantPositionFile(t, ds.reader, ds.logFile, 2)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 2)
 
 		wantRead(t, ds.reader, "o")
 		wantReadAll(t, ds.reader, "")
-		wantPositionFile(t, ds.reader, ds.logFile, 3)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
 
 		ds.logFile.WriteString("bar")
 		wantReadAll(t, ds.reader, "bar")
-		wantPositionFile(t, ds.reader, ds.logFile, 6)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 6)
 	})
 
 	t.Run("Follow Rotate", func(t *testing.T) {
@@ -42,7 +44,7 @@ func TestNoPositionFile(t *testing.T) {
 
 		ds.logFile.WriteString("foo")
 		wantReadAll(t, ds.reader, "foo")
-		wantPositionFile(t, ds.reader, ds.logFile, 3)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
 	})
 
 	t.Run("No Follow Rotate", func(t *testing.T) {
@@ -63,7 +65,7 @@ func TestNoPositionFile(t *testing.T) {
 
 		ds.logFile.WriteString("foo")
 		wantReadAll(t, ds.reader, "")
-		wantPositionFile(t, ds.reader, bkLogFile, 0)
+		wantPositionFile(t, ds.reader.positionFile, bkLogFile, 0)
 	})
 
 	t.Run("Follow Rotate DetectRotateDelay", func(t *testing.T) {
@@ -82,12 +84,12 @@ func TestNoPositionFile(t *testing.T) {
 		ds.logFile.WriteString("foo")
 		rotateLogFile(ds.logFile)
 		wantReadAll(t, ds.reader, "foo")
-		wantPositionFile(t, ds.reader, bkLogFile, 3)
+		wantPositionFile(t, ds.reader.positionFile, bkLogFile, 3)
 
 		wantDetectRotate(t, ds.reader, time.Second)
 		ds.logFile.WriteString("bar")
 		wantReadAll(t, ds.reader, "bar")
-		wantPositionFile(t, ds.reader, ds.logFile, 3)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
 	})
 }
 
@@ -95,46 +97,47 @@ func TestWithPositionFile(t *testing.T) {
 	t.Run("Works", func(t *testing.T) {
 		t.Parallel()
 
-		logFile, fileInfo := createLogFile()
+		logFile, fileStat := createLogFile()
 		logFile.WriteString("bar")
-		positionFile := posfile.InMemory(fileInfo, 2)
+		positionFile := posfile.InMemory(fileStat, 2)
 		ds, teardown := setupWithLogFile(logFile, WithPositionFile(positionFile))
 		defer teardown()
 
 		wantReadAll(t, ds.reader, "r")
-		wantPositionFile(t, ds.reader, ds.logFile, 3)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
 
 		ds.logFile.WriteString("baz")
 		wantReadAll(t, ds.reader, "baz")
-		wantPositionFile(t, ds.reader, ds.logFile, 6)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 6)
 	})
 
 	t.Run("Incorrect offset", func(t *testing.T) {
 		t.Parallel()
 
-		logFile, fileInfo := createLogFile()
+		logFile, fileStat := createLogFile()
 		logFile.WriteString("bar")
-		positionFile := posfile.InMemory(fileInfo, 4)
+		positionFile := posfile.InMemory(fileStat, 4)
 		ds, teardown := setupWithLogFile(logFile, WithPositionFile(positionFile))
 		defer teardown()
 
 		wantReadAll(t, ds.reader, "")
-		wantPositionFile(t, ds.reader, ds.logFile, 3)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
 
 		ds.logFile.WriteString("baz")
 		wantReadAll(t, ds.reader, "baz")
-		wantPositionFile(t, ds.reader, ds.logFile, 6)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 6)
 	})
 
 	t.Run("Same file not found", func(t *testing.T) {
 		t.Parallel()
 
-		logFile, fileInfo := createLogFile()
+		logFile, fileStat := createLogFile()
 		logFile.WriteString("bar")
+		logFileName := logFile.Name()
 		rotateLogFile(logFile)
 
-		positionFile := posfile.InMemory(fileInfo, 2)
-		newLogFile, err := os.OpenFile(filepath.Join(filepath.Dir(logFile.Name()), fileInfo.Name()), os.O_CREATE|os.O_WRONLY, 0600)
+		positionFile := posfile.InMemory(fileStat, 2)
+		newLogFile, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
 			panic(err)
 		}
@@ -142,11 +145,11 @@ func TestWithPositionFile(t *testing.T) {
 		defer teardown()
 
 		wantReadAll(t, ds.reader, "")
-		wantPositionFile(t, ds.reader, ds.logFile, 0)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 0)
 
 		ds.logFile.WriteString("baz")
 		wantReadAll(t, ds.reader, "baz")
-		wantPositionFile(t, ds.reader, ds.logFile, 3)
+		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
 	})
 }
 
@@ -157,7 +160,7 @@ type dataset struct {
 	reader  *reader
 }
 
-func createLogFile() (*os.File, os.FileInfo) {
+func createLogFile() (*os.File, *stat.FileStat) {
 	tempDir, err := ioutil.TempDir("", "follow-")
 	if err != nil {
 		panic(err)
@@ -166,11 +169,11 @@ func createLogFile() (*os.File, os.FileInfo) {
 	if err != nil {
 		panic(err)
 	}
-	fileInfo, err := logFile.Stat()
+	fileStat, err := stat.Stat(logFile)
 	if err != nil {
 		panic(err)
 	}
-	return logFile, fileInfo
+	return logFile, fileStat
 }
 
 func rotateLogFile(logFile *os.File) {
@@ -209,18 +212,18 @@ func setupWithLogFile(logFile *os.File, opts ...OptionFunc) (ds *dataset, teardo
 	return &dataset{logFile: logFile, reader: reader}, teardown
 }
 
-func wantPositionFile(t *testing.T, reader *reader, wantFileInfoFile *os.File, wantOffset int64) {
+func wantPositionFile(t *testing.T, positionFile posfile.PositionFile, wantFileStatFile *os.File, wantOffset int64) {
 	t.Helper()
 
-	wantFileInfo, err := wantFileInfoFile.Stat()
+	wantFileStat, err := stat.Stat(wantFileStatFile)
 	if err != nil {
-		t.Errorf("failed to get fileInfo: %v", err)
+		t.Errorf("failed to get fileStat: %v", err)
 		return
 	}
-	if !os.SameFile(reader.positionFile.FileInfo(), wantFileInfo) {
-		t.Errorf("fileInfo not same")
+	if !stat.SameFile(positionFile.FileStat(), wantFileStat) {
+		t.Errorf("fileStat not same")
 	}
-	if g, w := reader.positionFile.Offset(), wantOffset; g != w {
+	if g, w := positionFile.Offset(), wantOffset; g != w {
 		t.Errorf("offset got %v, want %v", g, w)
 	}
 }
