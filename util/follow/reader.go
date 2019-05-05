@@ -55,6 +55,7 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 
 	positionFile := opt.positionFile
 	if positionFile == nil {
+		logger.Println("follow: positionFile not specified. use in-memory positionFile.")
 		positionFile = posfile.InMemory(fileStat, fileInfo.Size())
 	}
 	if positionFile.FileStat() == nil {
@@ -83,6 +84,7 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 	if offset != positionFile.Offset() {
 		return errAndClose(fmt.Errorf("follow: seems like seek failed. positionFile offset %d. file offset %d", positionFile.Offset(), offset))
 	}
+
 	return newReader(f, positionFile, opt), nil
 }
 

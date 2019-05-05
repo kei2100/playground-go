@@ -153,9 +153,6 @@ func TestWithPositionFile(t *testing.T) {
 	})
 }
 
-// TODO
-// use saved positionfile
-
 type dataset struct {
 	logFile *os.File
 	reader  *reader

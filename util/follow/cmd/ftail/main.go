@@ -8,6 +8,8 @@ import (
 	"github.com/kei2100/playground-go/util/follow"
 )
 
+// TODO opts
+
 func main() {
 	subject := os.Args[1]
 	posfilePath := os.Args[2]

@@ -69,6 +69,11 @@ func TestOpenUpdate(t *testing.T) {
 	}
 }
 
+// TODO refactor
+
+// TODO
+// use saved positionfile
+
 type onceClose struct {
 	once sync.Once
 	PositionFile
