@@ -23,14 +23,14 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 	opt := option{}
 	opt.apply(opts...)
 
-	f, err := file.Open(name)
-	if err != nil {
-		return nil, err
-	}
+	var f *os.File
+	var err error
 
 	errAndClose := func(err error) (Reader, error) {
-		if cErr := f.Close(); cErr != nil {
-			logger.Printf("follow: an error occurred while closing the file %s: %+v", name, cErr)
+		if f != nil {
+			if cErr := f.Close(); cErr != nil {
+				logger.Printf("follow: an error occurred while closing the file %s: %+v", name, cErr)
+			}
 		}
 		if opt.positionFile != nil {
 			if cErr := opt.positionFile.Close(); cErr != nil {
@@ -40,6 +40,10 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 		return nil, err
 	}
 
+	f, err = file.Open(name)
+	if err != nil {
+		return errAndClose(err)
+	}
 	fileStat, err := stat.Stat(f)
 	if err != nil {
 		return errAndClose(err)
@@ -49,33 +53,37 @@ func Open(name string, opts ...OptionFunc) (Reader, error) {
 		return errAndClose(err)
 	}
 
-	if opt.positionFile == nil {
-		positionFile := posfile.InMemory(fileStat, 0)
-		return newReader(f, positionFile, opt), nil
+	positionFile := opt.positionFile
+	if positionFile == nil {
+		positionFile = posfile.InMemory(fileStat, fileInfo.Size())
 	}
-	if opt.positionFile.FileStat() == nil {
-		opt.positionFile.Update(fileStat, 0)
-		return newReader(f, opt.positionFile, opt), nil
+	if positionFile.FileStat() == nil {
+		if err := positionFile.Set(fileStat, fileInfo.Size()); err != nil {
+			return errAndClose(err)
+		}
 	}
-	if !stat.SameFile(fileStat, opt.positionFile.FileStat()) {
-		logger.Printf("follow: file not found that matches fileStat of the positionFile %+v. reset positionFile.", opt.positionFile.FileStat())
-		opt.positionFile.Update(fileStat, 0)
-		return newReader(f, opt.positionFile, opt), nil
+	if !stat.SameFile(fileStat, positionFile.FileStat()) {
+		logger.Printf("follow: file not found that matches fileStat of the positionFile %+v. reset positionFile.", positionFile.FileStat())
+		if err := positionFile.Set(fileStat, fileInfo.Size()); err != nil {
+			return errAndClose(err)
+		}
 	}
 
-	if fileInfo.Size() < opt.positionFile.Offset() {
+	if fileInfo.Size() < positionFile.Offset() {
 		// consider file truncated
-		logger.Printf("follow: incorrect positionFile offset %d. file size %d. reset offset to %d.", opt.positionFile.Offset(), fileInfo.Size(), fileInfo.Size())
-		opt.positionFile.Update(fileStat, fileInfo.Size())
+		logger.Printf("follow: incorrect positionFile offset %d. file size %d. reset offset to %d.", positionFile.Offset(), fileInfo.Size(), fileInfo.Size())
+		if err := positionFile.SetOffset(fileInfo.Size()); err != nil {
+			return errAndClose(err)
+		}
 	}
-	offset, err := f.Seek(opt.positionFile.Offset(), 0)
+	offset, err := f.Seek(positionFile.Offset(), 0)
 	if err != nil {
 		return errAndClose(err)
 	}
-	if offset != opt.positionFile.Offset() {
-		return errAndClose(fmt.Errorf("follow: seems like seek failed. positionFile offset %d. file offset %d", opt.positionFile.Offset(), offset))
+	if offset != positionFile.Offset() {
+		return errAndClose(fmt.Errorf("follow: seems like seek failed. positionFile offset %d. file offset %d", positionFile.Offset(), offset))
 	}
-	return newReader(f, opt.positionFile, opt), nil
+	return newReader(f, positionFile, opt), nil
 }
 
 type reader struct {
@@ -112,8 +120,13 @@ func (r *reader) Read(p []byte) (n int, err error) {
 	select {
 	default:
 		n, err := r.file.Read(p)
-		r.positionFile.IncreaseOffset(n)
-		return n, err
+		if err != nil {
+			return n, err
+		}
+		if err := r.positionFile.IncreaseOffset(n); err != nil {
+			return n, err
+		}
+		return n, nil
 
 	case <-r.rotated:
 		if err := r.file.Close(); err != nil {
@@ -128,7 +141,9 @@ func (r *reader) Read(p []byte) (n int, err error) {
 			return 0, err
 		}
 		r.file = f
-		r.positionFile.Update(st, 0)
+		if err := r.positionFile.Set(st, 0); err != nil {
+			return 0, err
+		}
 		r.rotated = watchRotate(r.closed, r.file, r.watchRotateInterval, r.detectRotateDelay)
 		return r.Read(p)
 	}

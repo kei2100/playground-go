@@ -36,7 +36,7 @@ func TestOpenUpdate(t *testing.T) {
 	pf = &onceClose{PositionFile: pf}
 	defer pf.Close()
 
-	pf.Update(someFileStat, 0)
+	pf.Set(someFileStat, 0)
 	pf.IncreaseOffset(2)
 	if !stat.SameFile(pf.FileStat(), someFileStat) {
 		t.Errorf("not same fileStat\ngot: \n%+v\nwant: \n%+v", pf.FileStat(), someFileStat)

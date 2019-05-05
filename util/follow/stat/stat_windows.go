@@ -1,6 +1,9 @@
 package stat
 
-import "os"
+import (
+	"os"
+	"syscall"
+)
 
 // See
 // - https://github.com/golang/go/blob/release-branch.go1.12/src/os/types_windows.go
@@ -9,9 +12,8 @@ import "os"
 func stat(file *os.File) (*FileStat, error) {
 	h := syscall.Handle(file.Fd())
 	var d syscall.ByHandleFileInformation
-	err = syscall.GetFileInformationByHandle(h, &d)
-	if err != nil {
-		return nil, &os.PathError{"GetFileInformationByHandle", path, err}
+	if err := syscall.GetFileInformationByHandle(h, &d); err != nil {
+		return nil, &os.PathError{"GetFileInformationByHandle", file.Name(), err}
 	}
 	return &FileStat{
 		Vol: d.VolumeSerialNumber,

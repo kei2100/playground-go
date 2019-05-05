@@ -2,7 +2,6 @@ package posfile
 
 import (
 	"encoding/gob"
-	"log"
 	"os"
 
 	"github.com/kei2100/playground-go/util/follow/stat"
@@ -17,9 +16,13 @@ type PositionFile interface {
 	// Offset returns offset value
 	Offset() int64
 	// IncreaseOffset increases offset value
-	IncreaseOffset(incr int)
-	// Update updates fileStat and offset
-	Update(fileStat *stat.FileStat, offset int64)
+	IncreaseOffset(incr int) error
+	// Set set fileStat and offset
+	Set(fileStat *stat.FileStat, offset int64) error
+	// SetOffset set offset value
+	SetOffset(offset int64) error
+	// SetFileStat set fileStat
+	SetFileStat(fileStat *stat.FileStat) error
 }
 
 type entry struct {
@@ -65,24 +68,30 @@ func (pf *positionFile) Offset() int64 {
 	return pf.entry.Offset
 }
 
-func (pf *positionFile) IncreaseOffset(incr int) {
-	// TODO
-	pf.Update(pf.FileStat(), pf.Offset()+int64(incr))
+func (pf *positionFile) IncreaseOffset(incr int) error {
+	return pf.Set(pf.FileStat(), pf.Offset()+int64(incr))
 }
 
-func (pf *positionFile) Update(fileStat *stat.FileStat, offset int64) {
+func (pf *positionFile) Set(fileStat *stat.FileStat, offset int64) error {
 	pf.entry.FileStat = fileStat
 	pf.entry.Offset = offset
 
 	if _, err := pf.f.Seek(0, 0); err != nil {
-		log.Print(err)
-		// TODO
+		return err
 	}
 	enc := gob.NewEncoder(pf.f)
 	if err := enc.Encode(&pf.entry); err != nil {
-		log.Print(err)
-		// TODO
+		return err
 	}
+	return nil
+}
+
+func (pf *positionFile) SetOffset(offset int64) error {
+	return pf.Set(pf.FileStat(), offset)
+}
+
+func (pf *positionFile) SetFileStat(fileStat *stat.FileStat) error {
+	return pf.Set(fileStat, pf.Offset())
 }
 
 // InMemory creates a inMemory PositionFile
@@ -106,11 +115,20 @@ func (pf *inMemory) Offset() int64 {
 	return pf.entry.Offset
 }
 
-func (pf *inMemory) IncreaseOffset(incr int) {
-	pf.Update(pf.FileStat(), pf.Offset()+int64(incr))
+func (pf *inMemory) IncreaseOffset(incr int) error {
+	return pf.Set(pf.FileStat(), pf.Offset()+int64(incr))
 }
 
-func (pf *inMemory) Update(fileStat *stat.FileStat, offset int64) {
+func (pf *inMemory) Set(fileStat *stat.FileStat, offset int64) error {
 	pf.entry.FileStat = fileStat
 	pf.entry.Offset = offset
+	return nil
+}
+
+func (pf *inMemory) SetOffset(offset int64) error {
+	return pf.Set(pf.FileStat(), offset)
+}
+
+func (pf *inMemory) SetFileStat(fileStat *stat.FileStat) error {
+	return pf.Set(fileStat, pf.Offset())
 }

@@ -46,6 +46,15 @@ func WithPositionFile(positionFile posfile.PositionFile) OptionFunc {
 	}
 }
 
+// WithPositionFilePath let you change positionFile
+func WithPositionFilePath(path string) (OptionFunc, error) {
+	pf, err := posfile.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return WithPositionFile(pf), nil
+}
+
 // WithWatchRotateInterval let you change watchRotateInterval
 func WithWatchRotateInterval(v time.Duration) OptionFunc {
 	return func(o *option) {
