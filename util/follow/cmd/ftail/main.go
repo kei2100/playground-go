@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/kei2100/playground-go/util/follow"
 	"io"
 	"os"
 	"time"
+
+	"github.com/kei2100/playground-go/util/follow"
 )
 
 func main() {
