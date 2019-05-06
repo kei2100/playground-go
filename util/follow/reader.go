@@ -13,12 +13,12 @@ import (
 	"github.com/kei2100/playground-go/util/follow/posfile"
 )
 
-// Reader is an interface.
+// Reader interface.
 type Reader interface {
 	io.ReadCloser
 }
 
-// Open opens the named file for reading.
+// Open opens the named file and returns the follow.Reader
 func Open(name string, opts ...OptionFunc) (Reader, error) {
 	opt := option{}
 	opt.apply(opts...)

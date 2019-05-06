@@ -15,7 +15,7 @@ func stat(file *os.File) (*FileStat, error) {
 	}
 	sys, ok := fi.Sys().(*syscall.Stat_t)
 	if !ok {
-		return nil, fmt.Errorf("follow: unexpected FileInfo.Sys() name %s, type %T", file.Name(), fi.Sys())
+		return nil, fmt.Errorf("follow: unexpected FileInfo.Sys() type. name %s, type %T", file.Name(), fi.Sys())
 	}
 	return &FileStat{Sys: sys}, nil
 }

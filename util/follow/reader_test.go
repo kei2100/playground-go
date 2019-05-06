@@ -188,8 +188,6 @@ func TestWithPositionFile(t *testing.T) {
 	})
 }
 
-// TODO e2e, saved posfile
-
 func mustOpen(name string, opt ...OptionFunc) *reader {
 	r, err := Open(name, opt...)
 	if err != nil {
