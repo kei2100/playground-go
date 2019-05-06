@@ -1,84 +1,30 @@
-package stat
+package stat_test
 
 import (
-	"io/ioutil"
 	"os"
-	"path/filepath"
-	"sync"
 	"testing"
+
+	"github.com/kei2100/playground-go/util/follow/internal/testutil"
+	. "github.com/kei2100/playground-go/util/follow/stat"
 )
 
 func TestSameFile(t *testing.T) {
-	ds, teardown := setup()
-	defer teardown()
+	td := testutil.CreateTempDir()
+	defer td.RemoveAll()
 
-	f := createFile(ds, "f")
-	defer f.Close()
-	stat := statFile(f)
+	file, fileStat := td.CreateFile("foo-file")
+	file.Close()
 
-	f.Close()
-	os.Rename(f.Name(), f.Name()+".bk")
-	renamedStat := statFile(openFile(f.Name() + ".bk"))
+	os.Rename(file.Name(), file.Name()+".bk")
+	renamedStat := testutil.Stat(file.Name() + ".bk")
 
-	newf := createFile(ds, "f")
-	defer newf.Close()
-	newstat := statFile(newf)
+	newfile, newfileStat := td.CreateFile("foo-file")
+	newfile.Close()
 
-	if !SameFile(stat, renamedStat) {
+	if !SameFile(fileStat, renamedStat) {
 		t.Errorf("stat renamedStat are the not same")
 	}
-	if SameFile(stat, newstat) {
+	if SameFile(fileStat, newfileStat) {
 		t.Errorf("stat newstat are the same")
 	}
-}
-
-type dataSet struct {
-	tempDir string
-}
-
-func setup() (ds *dataSet, teardown func()) {
-	tempDir, err := ioutil.TempDir("", "follow-")
-	if err != nil {
-		panic(err)
-	}
-	return &dataSet{tempDir: tempDir}, func() {
-		os.RemoveAll(tempDir)
-	}
-}
-
-func createFile(ds *dataSet, name string) *onceCloseFile {
-	f, err := os.OpenFile(filepath.Join(ds.tempDir, name), os.O_CREATE, 0600)
-	if err != nil {
-		panic(err)
-	}
-	return &onceCloseFile{File: f}
-}
-
-func openFile(name string) *onceCloseFile {
-	f, err := os.Open(name)
-	if err != nil {
-		panic(err)
-	}
-	return &onceCloseFile{File: f}
-}
-
-func statFile(f *onceCloseFile) *FileStat {
-	s, err := Stat(f.File)
-	if err != nil {
-		panic(err)
-	}
-	return s
-}
-
-type onceCloseFile struct {
-	once sync.Once
-	*os.File
-}
-
-func (f *onceCloseFile) Close() error {
-	var err error
-	f.once.Do(func() {
-		err = f.File.Close()
-	})
-	return err
 }

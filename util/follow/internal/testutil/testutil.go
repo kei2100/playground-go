@@ -25,6 +25,20 @@ func (c *OnceCloser) Close() error {
 	return err
 }
 
+// Stat return FileStat by name
+func Stat(name string) *stat.FileStat {
+	f, err := os.Open(name)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	s, err := stat.Stat(f)
+	if err != nil {
+		panic(err)
+	}
+	return s
+}
+
 // CreateTempDir creates a temp dir for testing
 func CreateTempDir() *TempDir {
 	d, err := ioutil.TempDir("", "follow-test")
@@ -46,7 +60,7 @@ func (d *TempDir) RemoveAll() {
 
 // CreateFile creates a file in the temp dir
 func (d *TempDir) CreateFile(name string) (*os.File, *stat.FileStat) {
-	f, err := os.OpenFile(filepath.Join(d.Path, name), os.O_CREATE, 0600)
+	f, err := os.OpenFile(filepath.Join(d.Path, name), os.O_CREATE|os.O_WRONLY|os.O_SYNC, 0600)
 	if err != nil {
 		panic(err)
 	}

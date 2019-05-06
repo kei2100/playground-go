@@ -2,14 +2,16 @@ package follow
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/kei2100/playground-go/util/follow/internal/testutil"
+
 	"github.com/kei2100/playground-go/util/follow/stat"
 
-	"github.com/kei2100/playground-go/util/follow/file"
 	"github.com/kei2100/playground-go/util/follow/posfile"
 )
 
@@ -17,79 +19,102 @@ func TestNoPositionFile(t *testing.T) {
 	t.Run("Glow", func(t *testing.T) {
 		t.Parallel()
 
-		ds, teardown := setup()
-		defer teardown()
+		td := testutil.CreateTempDir()
+		defer td.RemoveAll()
 
-		ds.logFile.WriteString("foo")
-		wantRead(t, ds.reader, "fo")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 2)
+		f, fileStat := td.CreateFile("test.log")
+		defer f.Close()
 
-		wantRead(t, ds.reader, "o")
-		wantReadAll(t, ds.reader, "")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
+		r := mustOpen(f.Name())
+		defer r.Close()
 
-		ds.logFile.WriteString("bar")
-		wantReadAll(t, ds.reader, "bar")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 6)
+		log.Println(f.WriteString("foo"))
+		wantRead(t, r, "fo")
+		wantPositionFile(t, r.positionFile, fileStat, 2)
+
+		wantRead(t, r, "o")
+		wantReadAll(t, r, "")
+		wantPositionFile(t, r.positionFile, fileStat, 3)
+
+		f.WriteString("bar")
+		wantReadAll(t, r, "bar")
+		wantPositionFile(t, r.positionFile, fileStat, 6)
 	})
 
 	t.Run("Follow Rotate", func(t *testing.T) {
 		t.Parallel()
 
-		ds, teardown := setup(WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(0))
-		defer teardown()
+		td := testutil.CreateTempDir()
+		defer td.RemoveAll()
 
-		rotateLogFile(ds.logFile)
-		wantDetectRotate(t, ds.reader, 500*time.Millisecond)
+		old, _ := td.CreateFile("test.log")
+		oldc := testutil.OnceCloser{C: old}
+		defer oldc.Close()
 
-		ds.logFile.WriteString("foo")
-		wantReadAll(t, ds.reader, "foo")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
+		r := mustOpen(old.Name(), WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(0))
+		defer r.Close()
+
+		oldc.Close()
+		os.Rename(old.Name(), old.Name()+".bk")
+		current, currentStat := td.CreateFile(filepath.Base(old.Name()))
+		defer current.Close()
+
+		wantDetectRotate(t, r, 500*time.Millisecond)
+		current.WriteString("foo")
+		wantReadAll(t, r, "foo")
+		wantPositionFile(t, r.positionFile, currentStat, 3)
 	})
 
 	t.Run("No Follow Rotate", func(t *testing.T) {
 		t.Parallel()
 
-		ds, teardown := setup(WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(0), WithFollowRotate(false))
-		defer teardown()
+		td := testutil.CreateTempDir()
+		defer td.RemoveAll()
 
-		bkLogFile, err := file.Open(ds.logFile.Name())
-		if err != nil {
-			t.Errorf("failed to open %v", ds.logFile.Name())
-			return
-		}
-		defer bkLogFile.Close()
+		old, oldStat := td.CreateFile("test.log")
+		oldc := testutil.OnceCloser{C: old}
+		defer oldc.Close()
 
-		rotateLogFile(ds.logFile)
-		wantNoDetectRotate(t, ds.reader, 500*time.Millisecond)
+		r := mustOpen(old.Name(), WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(0), WithFollowRotate(false))
+		defer r.Close()
 
-		ds.logFile.WriteString("foo")
-		wantReadAll(t, ds.reader, "")
-		wantPositionFile(t, ds.reader.positionFile, bkLogFile, 0)
+		oldc.Close()
+		os.Rename(old.Name(), old.Name()+".bk")
+		current, _ := td.CreateFile(filepath.Base(old.Name()))
+		defer current.Close()
+
+		wantNoDetectRotate(t, r, 500*time.Millisecond)
+		current.WriteString("foo")
+		wantReadAll(t, r, "")
+		wantPositionFile(t, r.positionFile, oldStat, 0)
 	})
 
 	t.Run("Follow Rotate DetectRotateDelay", func(t *testing.T) {
 		t.Parallel()
 
-		ds, teardown := setup(WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(500*time.Millisecond))
-		defer teardown()
+		td := testutil.CreateTempDir()
+		defer td.RemoveAll()
 
-		bkLogFile, err := file.Open(ds.logFile.Name())
-		if err != nil {
-			t.Errorf("failed to open %v", ds.logFile.Name())
-			return
-		}
-		defer bkLogFile.Close()
+		old, oldStat := td.CreateFile("test.log")
+		oldc := testutil.OnceCloser{C: old}
+		defer oldc.Close()
 
-		ds.logFile.WriteString("foo")
-		rotateLogFile(ds.logFile)
-		wantReadAll(t, ds.reader, "foo")
-		wantPositionFile(t, ds.reader.positionFile, bkLogFile, 3)
+		r := mustOpen(old.Name(), WithWatchRotateInterval(10*time.Millisecond), WithDetectRotateDelay(500*time.Millisecond))
+		defer r.Close()
 
-		wantDetectRotate(t, ds.reader, time.Second)
-		ds.logFile.WriteString("bar")
-		wantReadAll(t, ds.reader, "bar")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
+		old.WriteString("foo")
+		oldc.Close()
+		os.Rename(old.Name(), old.Name()+".bk")
+		current, currentStat := td.CreateFile(filepath.Base(old.Name()))
+		defer current.Close()
+
+		wantReadAll(t, r, "foo")
+		wantPositionFile(t, r.positionFile, oldStat, 3)
+
+		wantDetectRotate(t, r, time.Second)
+		current.WriteString("barbaz")
+		wantReadAll(t, r, "barbaz")
+		wantPositionFile(t, r.positionFile, currentStat, 6)
 	})
 }
 
@@ -97,129 +122,85 @@ func TestWithPositionFile(t *testing.T) {
 	t.Run("Works", func(t *testing.T) {
 		t.Parallel()
 
-		logFile, fileStat := createLogFile()
-		logFile.WriteString("bar")
+		td := testutil.CreateTempDir()
+		defer td.RemoveAll()
+
+		f, fileStat := td.CreateFile("test.log")
+		defer f.Close()
+
+		f.WriteString("bar")
 		positionFile := posfile.InMemory(fileStat, 2)
-		ds, teardown := setupWithLogFile(logFile, WithPositionFile(positionFile))
-		defer teardown()
+		r := mustOpen(f.Name(), WithPositionFile(positionFile))
+		defer r.Close()
 
-		wantReadAll(t, ds.reader, "r")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
+		wantReadAll(t, r, "r")
+		wantPositionFile(t, r.positionFile, fileStat, 3)
 
-		ds.logFile.WriteString("baz")
-		wantReadAll(t, ds.reader, "baz")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 6)
+		f.WriteString("baz")
+		wantReadAll(t, r, "baz")
+		wantPositionFile(t, r.positionFile, fileStat, 6)
 	})
 
 	t.Run("Incorrect offset", func(t *testing.T) {
 		t.Parallel()
 
-		logFile, fileStat := createLogFile()
-		logFile.WriteString("bar")
+		td := testutil.CreateTempDir()
+		defer td.RemoveAll()
+
+		f, fileStat := td.CreateFile("test.log")
+		defer f.Close()
+
+		f.WriteString("bar")
 		positionFile := posfile.InMemory(fileStat, 4)
-		ds, teardown := setupWithLogFile(logFile, WithPositionFile(positionFile))
-		defer teardown()
+		r := mustOpen(f.Name(), WithPositionFile(positionFile))
+		defer r.Close()
 
-		wantReadAll(t, ds.reader, "")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
-
-		ds.logFile.WriteString("baz")
-		wantReadAll(t, ds.reader, "baz")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 6)
+		wantReadAll(t, r, "")
+		wantPositionFile(t, r.positionFile, fileStat, 3)
 	})
 
 	t.Run("Same file not found", func(t *testing.T) {
 		t.Parallel()
 
-		logFile, fileStat := createLogFile()
-		logFile.WriteString("bar")
-		logFileName := logFile.Name()
-		rotateLogFile(logFile)
+		td := testutil.CreateTempDir()
+		defer td.RemoveAll()
 
-		positionFile := posfile.InMemory(fileStat, 2)
-		newLogFile, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			panic(err)
-		}
-		ds, teardown := setupWithLogFile(newLogFile, WithPositionFile(positionFile))
-		defer teardown()
+		old, oldStat := td.CreateFile("test.log")
+		oldc := testutil.OnceCloser{C: old}
+		defer oldc.Close()
 
-		wantReadAll(t, ds.reader, "")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 0)
+		old.WriteString("foo")
+		oldc.Close()
+		os.Rename(old.Name(), old.Name()+".bk")
+		current, currentStat := td.CreateFile(filepath.Base(old.Name()))
+		defer current.Close()
 
-		ds.logFile.WriteString("baz")
-		wantReadAll(t, ds.reader, "baz")
-		wantPositionFile(t, ds.reader.positionFile, ds.logFile, 3)
+		positionFile := posfile.InMemory(oldStat, 2)
+		r := mustOpen(current.Name(), WithPositionFile(positionFile))
+		defer r.Close()
+
+		wantReadAll(t, r, "")
+		wantPositionFile(t, r.positionFile, currentStat, 0)
+
+		current.WriteString("bar")
+		wantReadAll(t, r, "bar")
+		wantPositionFile(t, r.positionFile, currentStat, 3)
 	})
 }
 
 // TODO e2e, saved posfile
 
-type dataset struct {
-	logFile *os.File
-	reader  *reader
-}
-
-func createLogFile() (*os.File, *stat.FileStat) {
-	tempDir, err := ioutil.TempDir("", "follow-")
+func mustOpen(name string, opt ...OptionFunc) *reader {
+	r, err := Open(name, opt...)
 	if err != nil {
 		panic(err)
 	}
-	logFile, err := os.OpenFile(filepath.Join(tempDir, "test.log"), os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		panic(err)
-	}
-	fileStat, err := stat.Stat(logFile)
-	if err != nil {
-		panic(err)
-	}
-	return logFile, fileStat
+	return r.(*reader)
 }
 
-func rotateLogFile(logFile *os.File) {
-	logFile.Close()
-	if err := os.Rename(logFile.Name(), logFile.Name()+".1"); err != nil {
-		panic(err)
-	}
-	newLogFile, err := os.OpenFile(logFile.Name(), os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		panic(err)
-	}
-	*logFile = *newLogFile
-}
-
-func setup(opts ...OptionFunc) (ds *dataset, teardown func()) {
-	logFile, _ := createLogFile()
-	return setupWithLogFile(logFile, opts...)
-}
-
-func setupWithLogFile(logFile *os.File, opts ...OptionFunc) (ds *dataset, teardown func()) {
-	r, err := Open(logFile.Name(), opts...)
-	if err != nil {
-		panic(err)
-	}
-	reader, ok := r.(*reader)
-	if !ok {
-		panic("failed to cast")
-	}
-
-	teardown = func() {
-		logFile.Close()
-		reader.Close()
-		os.Remove(logFile.Name())
-		os.Remove(logFile.Name() + ".1") // See rotateLogFile(*os.File)
-	}
-	return &dataset{logFile: logFile, reader: reader}, teardown
-}
-
-func wantPositionFile(t *testing.T, positionFile posfile.PositionFile, wantFileStatFile *os.File, wantOffset int64) {
+func wantPositionFile(t *testing.T, positionFile posfile.PositionFile, wantFileStat *stat.FileStat, wantOffset int64) {
 	t.Helper()
 
-	wantFileStat, err := stat.Stat(wantFileStatFile)
-	if err != nil {
-		t.Errorf("failed to get fileStat: %v", err)
-		return
-	}
 	if !stat.SameFile(positionFile.FileStat(), wantFileStat) {
 		t.Errorf("fileStat not same")
 	}
