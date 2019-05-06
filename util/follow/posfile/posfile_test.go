@@ -1,88 +1,56 @@
 package posfile
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
-	"sync"
 	"testing"
+
+	"github.com/kei2100/playground-go/util/follow/internal/testutil"
 
 	"github.com/kei2100/playground-go/util/follow/stat"
 )
 
 func TestOpenUpdate(t *testing.T) {
-	dir, err := ioutil.TempDir("", "follow-")
-	if err != nil {
-		panic(err)
-	}
-	defer os.RemoveAll(dir)
+	td := testutil.CreateTempDir()
+	defer td.RemoveAll()
 
-	someFile, err := os.OpenFile(filepath.Join(dir, "somefile"), os.O_CREATE, 0600)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	someFileStat, err := stat.Stat(someFile)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	file, fileStat := td.CreateFile("foo.log")
+	defer file.Close()
 
-	pf, err := Open(filepath.Join(dir, "posfile"))
+	pfpath := filepath.Join(td.Path, "posfile")
+	pf, err := Open(pfpath)
 	if err != nil {
-		t.Errorf("failed to open posfile: %+v", err)
-		return
+		t.Fatalf("failed to open posfile: %+v", err)
 	}
-	pf = &onceClose{PositionFile: pf}
-	defer pf.Close()
+	pfc := testutil.OnceCloser{C: pf}
+	defer pfc.Close()
 
-	pf.Set(someFileStat, 0)
+	pf.Set(fileStat, 0)
 	pf.IncreaseOffset(2)
-	if !stat.SameFile(pf.FileStat(), someFileStat) {
-		t.Errorf("not same fileStat\ngot: \n%+v\nwant: \n%+v", pf.FileStat(), someFileStat)
+
+	if !stat.SameFile(pf.FileStat(), fileStat) {
+		t.Errorf("not same fileStat\ngot: \n%+v\nwant: \n%+v", pf.FileStat(), fileStat)
 	}
 	if g, w := pf.Offset(), int64(2); g != w {
 		t.Errorf("offset got %v, want %v", g, w)
 	}
-	if err := pf.Close(); err != nil {
-		t.Errorf("failed to close: %+v", err)
-		return
+	if err := pfc.Close(); err != nil {
+		t.Fatalf("failed to close: %+v", err)
 	}
 
-	pf2, err := Open(filepath.Join(dir, "posfile"))
+	pf2, err := Open(pfpath)
 	if err != nil {
-		t.Errorf("failed to open posfile: %+v", err)
-		return
+		t.Fatalf("failed to open posfile: %+v", err)
 	}
-	pf2 = &onceClose{PositionFile: pf2}
-	defer pf2.Close()
+	pfc2 := testutil.OnceCloser{C: pf2}
+	defer pfc2.Close()
 
-	if !stat.SameFile(pf2.FileStat(), someFileStat) {
-		t.Errorf("not same fileStat\ngot: \n%+v\nwant: \n%+v", pf2.FileStat(), someFileStat)
+	if !stat.SameFile(pf2.FileStat(), fileStat) {
+		t.Errorf("not same fileStat\ngot: \n%+v\nwant: \n%+v", pf2.FileStat(), fileStat)
 	}
 	if g, w := pf2.Offset(), int64(2); g != w {
 		t.Errorf("offset got %v, want %v", g, w)
 	}
-	if err := pf2.Close(); err != nil {
-		t.Errorf("failed to close: %+v", err)
-		return
+	if err := pfc2.Close(); err != nil {
+		t.Fatalf("failed to close: %+v", err)
 	}
-}
-
-// TODO refactor
-
-// TODO
-// use saved positionfile
-
-type onceClose struct {
-	once sync.Once
-	PositionFile
-}
-
-func (oc *onceClose) Close() error {
-	var err error
-	oc.once.Do(func() {
-		err = oc.PositionFile.Close()
-	})
-	return err
 }

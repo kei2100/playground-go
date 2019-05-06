@@ -153,6 +153,8 @@ func TestWithPositionFile(t *testing.T) {
 	})
 }
 
+// TODO e2e, saved posfile
+
 type dataset struct {
 	logFile *os.File
 	reader  *reader
