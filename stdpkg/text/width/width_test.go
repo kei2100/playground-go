@@ -42,6 +42,8 @@ func toHalf(s string) string {
 		"ヸ", "ヰﾞ", // 非濁点部半角対応なし
 		"ヹ", "ヱﾞ", // 非濁点部半角対応なし
 		"ヺ", "ｦﾞ",
+		"゛", "ﾞ",
+		"゜", "ﾟ",
 	)
 	s = rep.Replace(s)
 	return width.Narrow.String(s)
@@ -81,6 +83,8 @@ func toFull(s string) string {
 		"ヰﾞ", "ヸ", // 非濁点部半角対応なし
 		"ヱﾞ", "ヹ", // 非濁点部半角対応なし
 		"ｦﾞ", "ヺ",
+		"ﾞ", "゛",
+		"ﾟ", "゜",
 	)
 	s = rep.Replace(s)
 	return width.Widen.String(s)
@@ -188,6 +192,8 @@ func TestToHalf(t *testing.T) {
 		{"ヸ", "ヰﾞ"}, // 非濁点部半角対応なし
 		{"ヹ", "ヱﾞ"}, // 非濁点部半角対応なし
 		{"ヺ", "ｦﾞ"},
+		{"゛", "ﾞ"},
+		{"゜", "ﾟ"},
 		{"", ""},
 	}
 	for _, te := range tt {
@@ -297,6 +303,8 @@ func TestToFull(t *testing.T) {
 		{"ヰﾞ", "ヸ"}, // 非濁点部半角対応なし
 		{"ヱﾞ", "ヹ"}, // 非濁点部半角対応なし
 		{"ｦﾞ", "ヺ"},
+		{"ﾞ", "゛"},
+		{"ﾟ", "゜"},
 		{"", ""},
 	}
 	for _, te := range tt {
