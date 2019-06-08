@@ -29,3 +29,12 @@ done
 #  === TERM:143
 #  ./test.sh: line 18: 56788 Killed: 9               ./sleep
 #  === KILL:137
+
+
+# unixにおいて、Exit Code 128 以降は、128 + {Kill Signal}
+#
+# 0〜127	アプリケーションの終了コード
+#
+# 128	発生しない
+# 143	「kill -15」⇒ 128+15 = 143
+# 137	「kill -9」⇒ 128+9 = 137
