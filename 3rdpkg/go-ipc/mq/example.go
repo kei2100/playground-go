@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	mq.Destroy("mq")
+	//mq.Destroy("mq")
 	//q, err := mq.New("mq", os.O_CREATE|os.O_EXCL, 0666)
 	q, err := mq.New("mq", os.O_CREATE, 0666)
 	if err != nil {
