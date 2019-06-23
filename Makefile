@@ -1,33 +1,34 @@
-.PHONY: test.nocache test fmt vet lint setup vendor
-
 PACKAGES := $(shell go list ./...)
-DIRS := $(shell go list -f '{{.Dir}}' ./...)
+
+GREP := grep
+ifeq ($(OS),Windows_NT)
+	GREP := findstr
+endif
+
+# setup tasks
+.PHONY: setup
 
 setup:
-	which dep > /dev/null 2>&1 || go get -u github.com/golang/dep/cmd/dep
-	which goimports > /dev/null 2>&1 || go get -u golang.org/x/tools/cmd/goimports
-	which golint > /dev/null 2>&1 || go get -u golang.org/x/lint/golint
-	which richgo > /dev/null 2>&1 || go get -u github.com/kyoh86/richgo
+	go get -u golang.org/x/tools/cmd/goimports
+	go get -u golang.org/x/lint/golint
+	go get -u github.com/kyoh86/richgo
+	go mod tidy
 
-vendor: vendor/.timestamp
+# development tasks
+.PHONY: fmt lint vet test test.nocache
 
-vendor/.timestamp: $(shell find $(DIRS) -maxdepth 1 -name '*.go')
-	dep ensure -v
-	touch vendor/.timestamp
+fmt:
+	goimports -w .
+
+lint:
+	goimports -d . | $(GREP) "^" && exit 1 || exit 0
+	golint -set_exit_status $(PACKAGES)
 
 vet:
 	go vet $(PACKAGES)
-
-lint:
-	! find $(DIRS) -maxdepth 1 -name '*.go' | xargs goimports -d | grep '^'
-	echo $(PACKAGES) | xargs -n 1 golint -set_exit_status
-
-fmt:
-	find $(DIRS) -maxdepth 1 -name '*.go' | xargs goimports -w
 
 test:
 	richgo test -v -race $(PACKAGES)
 
 test.nocache:
 	richgo test -count=1 -v -race $(PACKAGES)
-
