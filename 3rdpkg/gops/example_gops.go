@@ -12,9 +12,7 @@ import (
 )
 
 func main() {
-	// Options.NoShutdownCleanup = false(デフォルト)だとSIGINTをトラップして
-	// os.Exit(1)する模様
-	if err := agent.Listen(&agent.Options{}); err != nil {
+	if err := agent.Listen(agent.Options{}); err != nil {
 		log.Fatal(err)
 	}
 	defer agent.Close()
