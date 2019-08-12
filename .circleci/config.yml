@@ -8,7 +8,7 @@ workflows:
 executors:
   standard:
     docker:
-      - image: circleci/golang:1.12.3
+      - image: circleci/golang:1.13beta1
       - image: circleci/mysql:5.7
         environment:
           MYSQL_ROOT_PASSWORD: root

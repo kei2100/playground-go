@@ -1,6 +1,6 @@
 module github.com/kei2100/playground-go
 
-go 1.12
+go 1.13
 
 require (
 	bitbucket.org/avd/go-ipc v0.6.1
