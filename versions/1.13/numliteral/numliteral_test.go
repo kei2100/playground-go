@@ -25,3 +25,6 @@ func ExampleNumberLiteral() {
 	// 1000
 	// true
 }
+
+// NumberLiteral noop
+func NumberLiteral() {}
