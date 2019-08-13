@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func ExampleNumberLiteral() {
+func Example() {
 	binary := 0b10
 	fmt.Println(binary)
 	fmt.Println(binary == 2)
@@ -25,6 +25,3 @@ func ExampleNumberLiteral() {
 	// 1000
 	// true
 }
-
-// NumberLiteral noop
-func NumberLiteral() {}
