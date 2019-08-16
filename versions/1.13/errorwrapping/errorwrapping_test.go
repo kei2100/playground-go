@@ -31,3 +31,7 @@ func TestErrorsAs(t *testing.T) {
 		log.Println(causeError) // cause!  err chainからcauseErrorに合う型をさがしてセットする
 	}
 }
+
+// TODO
+type CustomError struct {
+}
