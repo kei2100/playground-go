@@ -21,6 +21,13 @@ func TestFmtErrorfWrap(t *testing.T) {
 func TestErrorsIs(t *testing.T) {
 	err := fmt.Errorf("wrapped: %w", &cause{})
 	fmt.Println(errors.Is(err, &cause{})) // true
+
+	// 以下コードは
+	//   if err == io.ErrUnexpectedEOF
+	// 今後以下にすべき
+	//   if errors.Is(err, io.ErrUnexpectedEOF)
+	//
+	//   - Comparisons to io.EOF need not be changed, because io.EOF should never be wrapped
 }
 
 func TestErrorsAs(t *testing.T) {
@@ -29,6 +36,12 @@ func TestErrorsAs(t *testing.T) {
 	if ok := errors.As(err, &causeError); ok {
 		fmt.Println(causeError) // cause!  err chainからcauseErrorに合う型をさがしてセットする
 	}
+
+	// 以下コードは
+	//   if e, ok := err.(*os.PathError); ok
+	// 今後以下にすべき
+	//   var e *os.PathError
+	//   if errors.As(err, &e)
 }
 
 type customError struct {
