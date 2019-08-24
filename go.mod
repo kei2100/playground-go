@@ -20,7 +20,7 @@ require (
 	golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4 // indirect
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
-	golang.org/x/sys v0.0.0-20190804053845-51ab0e2deafa // indirect
+	golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a // indirect
 	golang.org/x/text v0.3.2
 	google.golang.org/genproto v0.0.0-20170711235230-b0a3dcfcd1a9 // indirect
 	google.golang.org/grpc v1.9.2
