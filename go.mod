@@ -16,13 +16,15 @@ require (
 	github.com/hashicorp/packer v1.2.2
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/pkg/errors v0.8.1
+	github.com/rs/xid v1.2.1
 	github.com/square/go-jose/v3 v3.0.0-20191013055707-2c8b6426f72c
 	github.com/stacktitan/smb v0.0.0-20170721050911-ba124664fd6b
-	golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4 // indirect
+	golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a // indirect
 	golang.org/x/text v0.3.2
+	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 	google.golang.org/genproto v0.0.0-20170711235230-b0a3dcfcd1a9 // indirect
 	google.golang.org/grpc v1.9.2
 )
