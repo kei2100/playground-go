@@ -6,13 +6,12 @@ import (
 	"testing"
 )
 
-func TestValueOf(t *testing.T) {
+func TestKind(t *testing.T) {
 	{
-		type myStruct struct {
-		}
+		type myStruct struct{}
 		var v *myStruct
 		rv := reflect.ValueOf(v)
-		log.Printf("kind:%v isnil:%v", rv.Kind(), rv.IsNil())
+		log.Printf("kind:%v isnil:%v", rv.Kind(), rv.IsNil()) // kind:ptr isnil:true
 	}
 	{
 		v := interface{}(interface{}("a"))
@@ -25,4 +24,40 @@ func TestValueOf(t *testing.T) {
 		rv := reflect.ValueOf(v)
 		log.Println(rv.Kind()) // string
 	}
+	{
+		v := make(map[string]interface{})
+		rv := reflect.ValueOf(v)
+		log.Println(rv.Kind()) // map
+	}
+	{
+		type mymap map[string]interface{}
+		var v mymap
+		rv := reflect.ValueOf(v)
+		log.Println(rv.Kind()) // map
+	}
+	{
+		v := map[string]interface{}{}
+		rv := reflect.ValueOf(v)
+		log.Println(rv.Kind()) // map
+	}
+	{
+		v := map[string]interface{}{
+			"vv": map[string]interface{}{
+				"vvs": "string",
+			},
+		}
+		rv := reflect.ValueOf(v["vv"])
+		log.Println(rv.Kind()) // map
+	}
 }
+
+//func TestStruct(t *testing.T) {
+//	type mystruct struct {
+//		Exported string
+//		unexported string
+//	}
+//	s := mystruct{}
+//
+//	rv := reflect.ValueOf(s)
+//	rt := rv.Type()
+//}

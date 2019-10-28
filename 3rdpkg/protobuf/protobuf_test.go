@@ -2,23 +2,52 @@ package protobuf
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/ptypes/struct"
 	"log"
 	"reflect"
 	"testing"
+	"unicode"
+
+	structpb "github.com/golang/protobuf/ptypes/struct"
 )
 
 func EncodeFromMap(m map[string]interface{}) (*structpb.Struct, error) {
-	var st structpb.Struct
-	st.Fields = make(map[string]*structpb.Value, len(m))
+	var pbst structpb.Struct
+	pbst.Fields = make(map[string]*structpb.Value, len(m))
 	for k, v := range m {
-		pv, err := EncodeValue(v)
+		pbv, err := EncodeValue(v)
 		if err != nil {
 			return nil, err
 		}
-		st.Fields[k] = pv
+		pbst.Fields[k] = pbv
 	}
-	return &st, nil
+	return &pbst, nil
+}
+
+func EncodeFromStruct(v interface{}) (*structpb.Struct, error) {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return nil, nil
+		}
+		rv = reflect.Indirect(rv)
+	}
+	if rv.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("oops")
+	}
+	rt := rv.Type()
+	pbst := structpb.Struct{Fields: make(map[string]*structpb.Value)}
+	for i := 0; i < rt.NumField(); i++ {
+		name := rt.Field(i).Name
+		if !unicode.IsUpper(rune(name[0])) {
+			continue
+		}
+		pbvalue, err := EncodeValue(rv.FieldByName(name).Interface())
+		if err != nil {
+			return nil, err
+		}
+		pbst.Fields[name] = pbvalue
+	}
+	return &pbst, nil
 }
 
 func EncodeValue(v interface{}) (*structpb.Value, error) {
@@ -41,36 +70,66 @@ func EncodeValue(v interface{}) (*structpb.Value, error) {
 	case reflect.Bool:
 		return &structpb.Value{Kind: &structpb.Value_BoolValue{BoolValue: rv.Bool()}}, nil
 	case reflect.Struct:
-		// TODO
+		pbst, err := EncodeFromStruct(rv.Interface())
+		if err != nil {
+			return nil, err
+		}
+		return &structpb.Value{Kind: &structpb.Value_StructValue{StructValue: pbst}}, nil
+
 	case reflect.Map:
 		keys := rv.MapKeys()
-		pbstruct := structpb.Struct{Fields: make(map[string]*structpb.Value, len(keys))}
-		for _, kv := range rv.MapKeys() {
+		pbst := structpb.Struct{Fields: make(map[string]*structpb.Value, len(keys))}
+		for _, kv := range keys {
 			if kv.Kind() != reflect.String {
 				return nil, fmt.Errorf("unknown key type: %v", rv.Kind())
 			}
-			pbvalue, err := EncodeValue(rv.MapIndex(kv))
+			pbv, err := EncodeValue(rv.MapIndex(kv).Interface())
 			if err != nil {
 				return nil, err
 			}
-			pbstruct.Fields[kv.String()] = pbvalue
+			pbst.Fields[kv.String()] = pbv
 		}
-		return &structpb.Value{Kind: &structpb.Value_StructValue{StructValue: &pbstruct}}, nil
+		return &structpb.Value{Kind: &structpb.Value_StructValue{StructValue: &pbst}}, nil
+
 	case reflect.Slice, reflect.Array:
-		// TODO
+		rvlen := rv.Len()
+		pblv := structpb.ListValue{Values: make([]*structpb.Value, rvlen)}
+		for i := 0; i < rvlen; i++ {
+			pbv, err := EncodeValue(rv.Index(i).Interface())
+			if err != nil {
+				return nil, err
+			}
+			pblv.Values[i] = pbv
+		}
+		return &structpb.Value{Kind: &structpb.Value_ListValue{ListValue: &pblv}}, nil
 	}
+
 	return nil, fmt.Errorf("unknown: %v", rv.Kind())
 }
 
 func TestEncode(t *testing.T) {
-	sp := "ss"
-	var snp *string
+	//sp := "ss"
+	//var snp *string
 	m := map[string]interface{}{
-		"1":      0.1,
-		"2":      1,
-		"str":    "str",
-		"strPtr": &sp,
-		"nil":    snp,
+		//"1":      0.1,
+		//"2":      1,
+		//"str":    "str",
+		//"strPtr": &sp,
+		//"nil":    snp,
+		//"bool": true,
+		//"map": make(map[string]interface{}),
+		"map": map[string]interface{}{
+			"foo": "bar",
+		},
+		"struct": struct {
+			Foo string
+			bar string
+		}{
+			Foo: "foo",
+			bar: "bar",
+		},
+		"arr":   [2]string{"foo", "bar"},
+		"slice": []string{"foo", "bar"},
 	}
 	s, err := EncodeFromMap(m)
 	log.Printf("\ns:%+v\nerr:%v", s, err)
