@@ -50,14 +50,3 @@ func TestKind(t *testing.T) {
 		log.Println(rv.Kind()) // map
 	}
 }
-
-//func TestStruct(t *testing.T) {
-//	type mystruct struct {
-//		Exported string
-//		unexported string
-//	}
-//	s := mystruct{}
-//
-//	rv := reflect.ValueOf(s)
-//	rt := rv.Type()
-//}
