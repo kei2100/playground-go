@@ -1,9 +1,10 @@
-package grpc_gateway
+package gateway
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTagBasedRequestFieldFilter(t *testing.T) {
@@ -26,7 +27,7 @@ func TestTagBasedRequestFieldFilter(t *testing.T) {
 	}
 	for i, te := range tt {
 		t.Run(fmt.Sprintf("#%d", i), func(t *testing.T) {
-			f := TagBasedRequestFieldFilter("log", func(tagValue string) bool { return tagValue != "-"})
+			f := TagBasedRequestFieldFilter("log", func(tagValue string) bool { return tagValue != "-" })
 			got := f("", te.in)
 			assert.Equal(t, te.want, got)
 		})

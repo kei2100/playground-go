@@ -1,15 +1,15 @@
-package grpc_gateway
+package gateway
 
 import (
-	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"reflect"
+
+	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 )
 
-//
+// FilterFunc type
 type FilterFunc func(tagValue string) bool
 
-// TODO もっとloggingよりにする
-// TagBasedRequestFieldFilter
+// TagBasedRequestFieldFilter -
 func TagBasedRequestFieldFilter(tagName string, fn FilterFunc) grpc_ctxtags.RequestFieldExtractorFunc {
 	return func(fullMethod string, req interface{}) map[string]interface{} {
 		retMap := make(map[string]interface{})
@@ -52,7 +52,7 @@ func reflectMessageTags(msg interface{}, existingMap map[string]interface{}, tag
 			fieldType := t.Field(i)
 			tagValue := fieldType.Tag.Get(tagName)
 			fieldName := fieldType.Name
-			if fn(tagValue)	{
+			if fn(tagValue) {
 				existingMap[fieldName] = field.Interface()
 			}
 		}
