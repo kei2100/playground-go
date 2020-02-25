@@ -55,4 +55,10 @@ func TestKind(t *testing.T) {
 		rt := reflect.TypeOf(m).Elem()
 		log.Println(rt) // *reflect.myStruct
 	}
+	{
+		type myStruct struct{}
+		var m map[string]*myStruct
+		rt := reflect.TypeOf(m).Key()
+		log.Println(rt) // string
+	}
 }
