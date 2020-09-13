@@ -22,26 +22,27 @@ commands:
 
   setup:
     steps:
+    - run: date +%Y%m > _yyyymm
     - restore_cache:
         keys:
-        - go-mod-v1-{{ checksum "go.sum" }}
-        - go-mod-v1-
+        - go-mod-{{ checksum "_yyyymm" }}-{{ checksum "go.sum" }}
 
     - run: make setup
     - run: go mod download
 
     - save_cache:
-        key: go-mod-v1-{{ checksum "go.sum" }}
+        key: go-mod-{{ checksum "_yyyymm" }}-{{ checksum "go.sum" }}
         paths:
-        - /go/pkg/mod/cache
+        - /go/pkg/mod
 
   lint:
     steps:
+    - run: date +%Y%m > _yyyymm
     - restore_cache:
-        key: lint-v1-{{ .Revision }}
+        key: lint-{{ checksum "_yyyymm" }}--{{ .Revision }}
     - run: ls .circleci/lintok > /dev/null 2>&1 || make vet lint && touch .circleci/lintok
     - save_cache:
-        key: lint-v1-{{ .Revision }}
+        key: lint-{{ checksum "_yyyymm" }}--{{ .Revision }}
         paths:
         - .circleci/lintok
 
