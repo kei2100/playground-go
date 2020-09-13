@@ -8,9 +8,9 @@ endif
 # setup tasks
 .PHONY: setup
 setup:
-	go get -u golang.org/x/tools/cmd/goimports
-	go get -u golang.org/x/lint/golint
-	go get -u github.com/kyoh86/richgo
+	go get golang.org/x/tools/cmd/goimports
+	go get golang.org/x/lint/golint
+	go get github.com/kyoh86/richgo
 	go mod tidy
 
 # development tasks
