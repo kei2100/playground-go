@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	bitbucket.org/avd/go-ipc v0.6.1
+	github.com/andybalholm/brotli v1.0.3
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-chi/chi v3.3.3+incompatible
 	github.com/go-sql-driver/mysql v1.3.0
