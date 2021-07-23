@@ -13,14 +13,14 @@ func TestPipe(t *testing.T) {
 		defer pw.Close()
 		_, err := pw.Write([]byte("hello"))
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 	}()
 
 	defer pr.Close()
 	got, err := ioutil.ReadAll(pr)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 
 	if g, w := string(got), "hello"; g != w {
