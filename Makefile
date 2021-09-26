@@ -1,36 +1,27 @@
-PACKAGES := $(shell go list ./...)
+GO ?= go
 
-GREP := grep
-ifeq ($(OS),Windows_NT)
-	GREP := findstr
-endif
+PACKAGES := $(shell $(GO) list ./...)
 
 # setup tasks
 .PHONY: setup
+
 setup:
-	go get golang.org/x/tools/cmd/goimports
-	go get golang.org/x/lint/golint
-	go get github.com/kyoh86/richgo
-	go mod tidy
+	$(GO) install golang.org/x/tools/cmd/goimports@latest
+	$(GO) install github.com/rakyll/gotest@latest
 
 # development tasks
 .PHONY: fmt
 fmt:
 	goimports -w .
 
-.PHONY: lint
-lint:
-	goimports -d . | $(GREP) "^" && exit 1 || exit 0
-	golint -set_exit_status $(PACKAGES)
-
 .PHONY: vet
 vet:
-	go vet $(PACKAGES)
+	$(GO) vet $(PACKAGES)
 
 .PHONY: test
 test:
-	richgo test -v -race $(PACKAGES)
+	gotest -race $(PACKAGES)
 
 .PHONY: test.nocache
 test.nocache:
-	richgo test -count=1 -v -race $(PACKAGES)
+	gotest -count=1 -race $(PACKAGES)

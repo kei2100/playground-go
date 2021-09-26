@@ -1,58 +1,40 @@
 version: 2.1
 
+orbs:
+  go: circleci/go@1.7.0
+
 workflows:
-  version: 2
   standard:
     jobs:
-    - test
+      - test
 
-executors:
-  standard:
-    docker:
-      - image: circleci/golang:1.16.0
-      - image: circleci/mysql:5.7
-        environment:
-          MYSQL_ROOT_PASSWORD: root
+jobs:
+  test:
+    executor:
+      name: go/default
+      tag: '1.17'
+    steps:
+      - checkout
+      - printenv
+      - go/load-cache
+      - go/mod-download
+      - run: make setup
+      - go/save-cache
+      - lint
+      - run: make test
 
 commands:
   printenv:
     steps:
-    - run: go version
-    - run: go env
-
-  setup:
-    steps:
-    - run: date +%Y%m > _yyyymm
-    - restore_cache:
-        keys:
-        - go-mod-{{ checksum "_yyyymm" }}-{{ checksum "go.sum" }}
-
-    - run: make setup
-    - run: go mod download
-
-    - save_cache:
-        key: go-mod-{{ checksum "_yyyymm" }}-{{ checksum "go.sum" }}
-        paths:
-        - /go/pkg/mod
+      - run: go version
+      - run: go env
 
   lint:
     steps:
-    - run: date +%Y%m > _yyyymm
-    - restore_cache:
-        key: lint-{{ checksum "_yyyymm" }}--{{ .Revision }}
-    - run: ls .circleci/lintok > /dev/null 2>&1 || make vet lint && touch .circleci/lintok
-    - save_cache:
-        key: lint-{{ checksum "_yyyymm" }}--{{ .Revision }}
-        paths:
-        - .circleci/lintok
-
-jobs:
-  test:
-    executor: standard
-    steps:
-      - checkout
-      - printenv
-      - setup
-      - lint
-      - run: dockerize -wait tcp://localhost:3306 -timeout 1m
-      - run: make test
+      - restore_cache:
+          key: lint-v1-{{ .Revision }}
+      - run: ls .circleci/lintok > /dev/null 2>&1 || make vet && touch .circleci/lintok
+      - save_cache:
+          key: lint-v1-{{ .Revision }}
+          paths:
+            - .circleci/lintok
