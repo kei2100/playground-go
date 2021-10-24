@@ -1,5 +1,6 @@
 //go:generate wire
-//+build wireinject
+//go:build wireinject
+// +build wireinject
 
 package main
 
