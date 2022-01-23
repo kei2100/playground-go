@@ -1,4 +1,5 @@
-GO ?= go
+#GO ?= go
+GO ?= go1.18beta1
 
 PACKAGES := $(shell $(GO) list ./...)
 
@@ -6,8 +7,9 @@ PACKAGES := $(shell $(GO) list ./...)
 .PHONY: setup
 
 setup:
+	# use go1.18beta1
+	go get golang.org/dl/go1.18beta1 && go1.18beta1 download
 	$(GO) install golang.org/x/tools/cmd/goimports@latest
-	$(GO) install github.com/rakyll/gotest@latest
 
 # development tasks
 .PHONY: fmt
@@ -20,8 +22,8 @@ vet:
 
 .PHONY: test
 test:
-	gotest -race $(PACKAGES)
+	$(GO) test -race $(PACKAGES)
 
 .PHONY: test.nocache
 test.nocache:
-	gotest -count=1 -race $(PACKAGES)
+	$(GO) test -count=1 -race $(PACKAGES)
