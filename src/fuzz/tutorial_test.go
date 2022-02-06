@@ -60,6 +60,16 @@ func FuzzReverse(f *testing.F) {
 	for _, tc := range testcases {
 		f.Add(tc) // Use f.Add to provide a seed corpus
 	}
+	// corpus に渡した param の順に arg を定義する。
+	// 例えば f.Add(int, string) としたら、
+	// f.Fuzz(func t *testing.T, i int, s string) { となる
+	//
+	// corpus に渡せる型は以下のみ
+	// * string, []byte
+	// * int, int8, int16, int32/rune, int64
+	// * uint, uint8/byte, uint16, uint32, uint64
+	// * float32, float64
+	// * bool
 	f.Fuzz(func(t *testing.T, orig string) {
 		rev := Reverse(orig)
 		doubleRev := Reverse(rev)
