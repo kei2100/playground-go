@@ -1,14 +1,12 @@
-#GO ?= go
-GO ?= go1.18beta1
+GO ?= go
 
 PACKAGES := $(shell $(GO) list ./...)
 
 # setup tasks
 .PHONY: setup
-
 setup:
-	# use go1.18beta1
-	go get golang.org/dl/go1.18beta1 && go1.18beta1 download
+	## use go1.18beta1
+	#go get golang.org/dl/go1.18beta1 && go1.18beta1 download
 	$(GO) install golang.org/x/tools/cmd/goimports@latest
 
 # development tasks
