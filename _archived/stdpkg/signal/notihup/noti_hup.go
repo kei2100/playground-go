@@ -22,7 +22,6 @@ import (
 // (resultA) 「received: usr1」,「received: hup」が表示される。プロセスは終了しない。
 // (resultB) 「received: usr1」が表示される。プロセスは終了しない。
 // (resultC) 「received: usr1」が表示される。プロセスは終了する。
-//
 func main() {
 	hup := flag.Bool("hup", true, "handle HUP")
 	usr1 := flag.Bool("usr1", true, "handle USR1")

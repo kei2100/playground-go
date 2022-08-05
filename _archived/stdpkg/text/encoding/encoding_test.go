@@ -24,13 +24,15 @@ const (
 )
 
 // NewWriter returns a new Writer that wraps w
-//   wに書き込まれたUTF8を、このEncodingでエンコードするWriterを返却する。
+//
+//	wに書き込まれたUTF8を、このEncodingでエンコードするWriterを返却する。
 func (e Encoding) NewWriter(w io.Writer) io.WriteCloser {
 	return transform.NewWriter(w, e.encoding().NewEncoder())
 }
 
 // NewReader returns a new Reader that wraps r
-//   このEncodingをUTF8にデコードするReaderを返却する。
+//
+//	このEncodingをUTF8にデコードするReaderを返却する。
 func (e Encoding) NewReader(r io.Reader) io.Reader {
 	return transform.NewReader(r, e.encoding().NewDecoder())
 }

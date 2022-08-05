@@ -5,9 +5,11 @@
 Package hello is a generated protocol buffer package.
 
 It is generated from these files:
+
 	hello.proto
 
 It has these top-level messages:
+
 	HelloRequest
 	HelloReply
 */

@@ -7,9 +7,10 @@ import (
 )
 
 // go build ppid.go
-//   2018/11/02 17:44:29 parent: my pid is 45923
-//   2018/11/02 17:44:29 child: my pid is 45924
-//   2018/11/02 17:44:29 child: parent pid is 45923
+//
+//	2018/11/02 17:44:29 parent: my pid is 45923
+//	2018/11/02 17:44:29 child: my pid is 45924
+//	2018/11/02 17:44:29 child: parent pid is 45923
 func main() {
 	if len(os.Args) < 2 {
 		p, err := os.Executable()

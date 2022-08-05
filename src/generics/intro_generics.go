@@ -5,12 +5,13 @@ import "golang.org/x/exp/constraints"
 // https://go.dev/blog/intro-generics
 
 // GMin is a generic min(a, b) function. using golang.org/x/exp/constraints package
-//   Actual definition of constraints.Ordered as follows
-//   ```
-//   type Ordered interface {
-//   	Integer | Float | ~string
-//   }
-//   ```
+//
+//	Actual definition of constraints.Ordered as follows
+//	```
+//	type Ordered interface {
+//		Integer | Float | ~string
+//	}
+//	```
 func GMin[T constraints.Ordered](x, y T) T {
 	if x < y {
 		return x
