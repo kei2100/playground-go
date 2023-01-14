@@ -14,11 +14,11 @@ func TestAES256GCM(t *testing.T) {
 	}
 	text := []byte("test test test")
 
-	ciphertext, nonce, err := AESGCMEncrypt(key256, text)
+	ciphertext, err := AESGCMEncrypt(key256, text)
 	if err != nil {
 		t.Fatal(err)
 	}
-	plaintext, err := AESGCMDecrypt(key256, nonce, ciphertext)
+	plaintext, err := AESGCMDecrypt(key256, ciphertext)
 	if err != nil {
 		t.Fatal(err)
 	}
