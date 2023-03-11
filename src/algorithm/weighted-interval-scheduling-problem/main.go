@@ -15,12 +15,17 @@ type job struct {
 
 func main() {
 	jobs := []*job{
-		{begin: 0, end: 2, weight: 4},
-		{begin: 1, end: 4, weight: 3},
-		{begin: 3, end: 6, weight: 1},
-		{begin: 5, end: 7, weight: 2},
-		{begin: 5, end: 9, weight: 4},
-		{begin: 7, end: 8, weight: 3},
+		{begin: 0, end: 5, weight: 1},
+		{begin: 4, end: 7, weight: 4},
+		{begin: 3, end: 8, weight: 6},
+		{begin: 5, end: 8, weight: 2},
+		{begin: 6, end: 10, weight: 5},
+		{begin: 9, end: 12, weight: 1},
+		{begin: 11, end: 16, weight: 7},
+		{begin: 14, end: 17, weight: 2},
+		{begin: 13, end: 18, weight: 9},
+		{begin: 15, end: 19, weight: 3},
+		{begin: 16, end: 20, weight: 8},
 	}
 	sum := resolve(jobs)
 	fmt.Println(sum)
