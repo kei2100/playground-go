@@ -13,4 +13,7 @@ func DeleteAt[T any](s []T, i int) []T {
 
 	// s[:i+n] = {0, 1, 3, 4}
 	return s[:i+n]
+
+	// Note:
+	// return append(s[:i], s[i+1:]...) でも同じ値を返せるがアロケーションが一回発生してしまう
 }
