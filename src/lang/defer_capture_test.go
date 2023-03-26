@@ -19,7 +19,7 @@ func TestDeferCaptureVariable(t *testing.T) {
 		defer c.Close()
 		c = &myCloser{message: "aaa"}
 		// Prints `a`
-		// defer に続く関数の評価時にキャプチャされる
+		// レシーバーや引数は defer の評価時にキャプチャされる（レシーバーも結局は引数）
 	})
 	t.Run("2", func(t *testing.T) {
 		c := &myCloser{message: "b"}
@@ -28,6 +28,6 @@ func TestDeferCaptureVariable(t *testing.T) {
 		}()
 		c = &myCloser{message: "bbb"}
 		// Prints `bbb`
-		// 無名関数の評価時では c はキャプチャ対象にならない
+		// c は無名関数の引数になっていないのでキャプチャされない
 	})
 }
