@@ -18,4 +18,15 @@ func TestMultipleErrors(t *testing.T) {
 	assert.True(t, errors.Is(wrap1, err2))
 	assert.True(t, errors.Is(wrap2, err1))
 	assert.True(t, errors.Is(wrap2, err2))
+
+	wrap3 := errors.Join(nil, nil)
+	assert.NoError(t, wrap3)
+
+	wrap4 := errors.Join(err1, nil)
+	assert.Error(t, wrap4)
+	assert.True(t, errors.Is(wrap4, err1))
+
+	wrap5 := errors.Join(nil, err1)
+	assert.Error(t, wrap5)
+	assert.True(t, errors.Is(wrap5, err1))
 }
