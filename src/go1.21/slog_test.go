@@ -68,6 +68,19 @@ func TestSlog_PrintStruct(t *testing.T) {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	log.Info("message", "cred", c)
 	// {"time":"2023-07-08T16:16:15.814178+09:00","level":"INFO","msg":"message","cred":{"Token":"sensitive","Data":{"ID":"foo","Password":"password"}}}
+
+	c2 := &Cred{
+		Token: "sensitive",
+		Data:  nil,
+	}
+	log.Info("message", "cred2", c2)
+	// {"time":"2023-07-08T17:16:02.578957+09:00","level":"INFO","msg":"message","cred2":{"Token":"sensitive","Data":null}}
+}
+
+func TestSlog_Value(t *testing.T) {
+	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	log.Info("test", "any_nil", slog.AnyValue(nil))
+	// {"time":"2023-07-08T17:21:34.1266+09:00","level":"INFO","msg":"test","any_nil":null}
 }
 
 type Cred struct {
@@ -106,7 +119,7 @@ type CredDataLogValuer struct {
 func (v *CredLogValuer) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("token", "xxxxxx"),
-		slog.Any("data", v.Data),
+		slog.Attr{Key: "data", Value: v.Data.LogValue()},
 	)
 }
 
