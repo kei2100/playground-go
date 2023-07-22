@@ -104,6 +104,12 @@ func TestSlog_PrintLogValuer(t *testing.T) {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	log.Info("message", "cred", c)
 	// {"time":"2023-07-08T16:27:58.235297+09:00","level":"INFO","msg":"message","cred":{"token":"xxxxxx","data":{"id":"foo","password":"yyyyyy"}}}
+	c = &CredLogValuer{
+		Token: "sensitive",
+		Data:  nil,
+	}
+	log.Info("message", "cred", c)
+	// {"time":"2023-07-19T20:15:10.945092+09:00","level":"INFO","msg":"message","cred":{"token":"xxxxxx","data":null}}
 }
 
 type CredLogValuer struct {
@@ -117,6 +123,9 @@ type CredDataLogValuer struct {
 }
 
 func (v *CredLogValuer) LogValue() slog.Value {
+	if v == nil {
+		return slog.AnyValue(nil)
+	}
 	return slog.GroupValue(
 		slog.String("token", "xxxxxx"),
 		slog.Attr{Key: "data", Value: v.Data.LogValue()},
@@ -124,6 +133,10 @@ func (v *CredLogValuer) LogValue() slog.Value {
 }
 
 func (v *CredDataLogValuer) LogValue() slog.Value {
+	if v == nil {
+		return slog.AnyValue(nil)
+	}
+	slog.Value{}.Kind()
 	return slog.GroupValue(
 		slog.String("id", v.ID),
 		slog.String("password", "yyyyyy"),
