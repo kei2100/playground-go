@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -161,6 +162,24 @@ func TestSlog_PrintCollection(t *testing.T) {
 			"one": 0.1,
 			"two": 0.2,
 		}),
-		// {"time":"2023-08-16T15:07:05.587383+09:00","level":"INFO","msg":"message","scalar":"value","empty_slice":[],"slice":[0.1,0.2],"empty_map":{},"empty_map":{"one":0.1,"two":0.2}}
+		slog.Any("log_valuer_slice", slog.AnyValue(
+			[]string{
+				upperCaseLogValuer("aaa").LogValue().String(),
+				alwaysZeroLogValur(100).LogValue().String(),
+			},
+		)),
 	)
+	// {"time":"2023-08-17T07:39:45.86706+09:00","level":"INFO","msg":"message","scalar":"value","empty_slice":[],"slice":[0.1,0.2],"empty_map":{},"empty_map":{"one":0.1,"two":0.2},"log_valuer_slice":["AAA","0"]}
+}
+
+type upperCaseLogValuer string
+
+func (v upperCaseLogValuer) LogValue() slog.Value {
+	return slog.StringValue(strings.ToUpper(string(v)))
+}
+
+type alwaysZeroLogValur int64
+
+func (v alwaysZeroLogValur) LogValue() slog.Value {
+	return slog.Int64Value(0)
 }
