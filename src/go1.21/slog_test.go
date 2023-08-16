@@ -1,6 +1,7 @@
 package go1_21
 
 import (
+	"context"
 	"log/slog"
 	"net/url"
 	"os"
@@ -140,5 +141,26 @@ func (v *CredDataLogValuer) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("id", v.ID),
 		slog.String("password", "yyyyyy"),
+	)
+}
+
+func TestSlog_PrintCollection(t *testing.T) {
+	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	log.LogAttrs(
+		context.Background(),
+		slog.LevelInfo,
+		"message",
+		slog.String("scalar", "value"),
+		slog.Any("empty_slice", make([]string, 0)),
+		slog.Any("slice", []float32{
+			0.1,
+			0.2,
+		}),
+		slog.Any("empty_map", make(map[string]string)),
+		slog.Any("empty_map", map[string]float32{
+			"one": 0.1,
+			"two": 0.2,
+		}),
+		// {"time":"2023-08-16T15:07:05.587383+09:00","level":"INFO","msg":"message","scalar":"value","empty_slice":[],"slice":[0.1,0.2],"empty_map":{},"empty_map":{"one":0.1,"two":0.2}}
 	)
 }
