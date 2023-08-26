@@ -1,11 +1,9 @@
 package go1_21
 
 import (
-	"context"
 	"log/slog"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 )
 
@@ -138,50 +136,8 @@ func (v *CredDataLogValuer) LogValue() slog.Value {
 	if v == nil {
 		return slog.AnyValue(nil)
 	}
-	slog.Value{}.Kind()
 	return slog.GroupValue(
 		slog.String("id", v.ID),
 		slog.String("password", "yyyyyy"),
 	)
-}
-
-func TestSlog_PrintCollection(t *testing.T) {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	log.LogAttrs(
-		context.Background(),
-		slog.LevelInfo,
-		"message",
-		slog.String("scalar", "value"),
-		slog.Any("empty_slice", make([]string, 0)),
-		slog.Any("slice", []float32{
-			0.1,
-			0.2,
-		}),
-		slog.Any("empty_map", make(map[string]string)),
-		slog.Any("empty_map", map[string]float32{
-			"one": 0.1,
-			"two": 0.2,
-		}),
-		slog.Any("int_map", map[int]float32{
-			10: 0.1,
-			20: 0.2,
-		}),
-		slog.Any("log_valuer_slice", []string{
-			upperCaseLogValuer("aaa").LogValue().String(),
-			alwaysZeroLogValur(100).LogValue().String(),
-		}),
-	)
-	// {"time":"2023-08-17T15:52:55.558225+09:00","level":"INFO","msg":"message","scalar":"value","empty_slice":[],"slice":[0.1,0.2],"empty_map":{},"empty_map":{"one":0.1,"two":0.2},"int_map":{"10":0.1,"20":0.2},"log_valuer_slice":["AAA","0"]}
-}
-
-type upperCaseLogValuer string
-
-func (v upperCaseLogValuer) LogValue() slog.Value {
-	return slog.StringValue(strings.ToUpper(string(v)))
-}
-
-type alwaysZeroLogValur int64
-
-func (v alwaysZeroLogValur) LogValue() slog.Value {
-	return slog.Int64Value(0)
 }
