@@ -25,14 +25,15 @@ func TestContextWithoutCancel(t *testing.T) {
 func TestContextAfterFunc(t *testing.T) {
 	// create test server
 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 		io.WriteString(w, "ok")
 	})
 	wrap := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w = &mutexResponseWriter{ResponseWriter: w}
-		context.AfterFunc(r.Context(), func() {
+		stop := context.AfterFunc(r.Context(), func() {
 			w.WriteHeader(499) // client closed
 		})
+		defer stop()
 		fn(w, r)
 	})
 	// send request
@@ -42,6 +43,13 @@ func TestContextAfterFunc(t *testing.T) {
 	rec := httptest.NewRecorder()
 	wrap(rec, req)
 	if g, w := rec.Code, 499; g != w {
+		t.Errorf("\ngot :%v\nwant:%v", rec.Code, 499)
+	}
+	// send request 2
+	req2, _ := http.NewRequest("GET", "/", nil)
+	rec = httptest.NewRecorder()
+	wrap(rec, req2)
+	if g, w := rec.Code, 200; g != w {
 		t.Errorf("\ngot :%v\nwant:%v", rec.Code, 499)
 	}
 }
