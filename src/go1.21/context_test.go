@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 )
@@ -28,6 +29,7 @@ func TestContextAfterFunc(t *testing.T) {
 		io.WriteString(w, "ok")
 	})
 	wrap := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w = &mutexResponseWriter{ResponseWriter: w}
 		context.AfterFunc(r.Context(), func() {
 			w.WriteHeader(499) // client closed
 		})
@@ -42,4 +44,21 @@ func TestContextAfterFunc(t *testing.T) {
 	if g, w := rec.Code, 499; g != w {
 		t.Errorf("\ngot :%v\nwant:%v", rec.Code, 499)
 	}
+}
+
+type mutexResponseWriter struct {
+	mu sync.Mutex
+	http.ResponseWriter
+}
+
+func (m *mutexResponseWriter) Write(b []byte) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.ResponseWriter.Write(b)
+}
+
+func (m *mutexResponseWriter) WriteHeader(statusCode int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.ResponseWriter.WriteHeader(statusCode)
 }
