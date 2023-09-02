@@ -46,9 +46,9 @@ func TestContextAfterFunc(t *testing.T) {
 		t.Errorf("\ngot :%v\nwant:%v", rec.Code, 499)
 	}
 	// send request 2
-	req2, _ := http.NewRequest("GET", "/", nil)
+	req, _ = http.NewRequest("GET", "/", nil)
 	rec = httptest.NewRecorder()
-	wrap(rec, req2)
+	wrap(rec, req)
 	if g, w := rec.Code, 200; g != w {
 		t.Errorf("\ngot :%v\nwant:%v", rec.Code, 499)
 	}
