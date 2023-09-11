@@ -5,7 +5,7 @@ go 1.21.0
 require (
 	github.com/pkg/profile v1.7.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/crypto v0.12.0
+	golang.org/x/crypto v0.13.0
 	golang.org/x/exp v0.0.0-20220323204016-c86f0da35e87
 	golang.org/x/net v0.14.0
 	golang.org/x/term v0.12.0
