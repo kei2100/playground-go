@@ -7,6 +7,9 @@ func main() {
 	println(lsd([]rune("こにゃにゃちわ世界"), []rune("こんにちは世界")))
 	println(lsd([]rune("こにゃちわ世界"), []rune("こんにちは世界")))
 	println(lsd([]rune("こんばんは世界"), []rune("こんにちは世界")))
+	println(lsd([]rune("こんばんは世界"), []rune("")))
+	println(lsd([]rune(""), []rune("こんばんは世界")))
+	println(lsd([]rune("にちは"), []rune("こんにちは世界")))
 }
 
 func lsd(s []rune, t []rune) int {
