@@ -7,7 +7,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.15.0
 	golang.org/x/exp v0.0.0-20220323204016-c86f0da35e87
-	golang.org/x/net v0.17.0
+	golang.org/x/net v0.18.0
 	golang.org/x/term v0.14.0
 )
 
