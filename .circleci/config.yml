@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  go: circleci/go@1.7.2
+  go: circleci/go@1.11.0
 
 workflows:
   standard:
@@ -12,7 +12,7 @@ jobs:
   test:
     executor:
       name: go/default
-      tag: '1.21.0'
+      tag: '1.22'
     steps:
       - checkout
       - printenv
