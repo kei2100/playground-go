@@ -1,14 +1,9 @@
-#GO ?= go1.21rc2
-GO ?= go
-
-PACKAGES := $(shell $(GO) list ./...)
+PACKAGES := $(shell go list ./...)
 
 # setup tasks
 .PHONY: setup
 setup:
-#	## use 1.21rc2
-#	go install golang.org/dl/go1.21rc2@latest && go1.21rc2 download
-	$(GO) install golang.org/x/tools/cmd/goimports@latest
+	go install golang.org/x/tools/cmd/goimports@latest
 
 # development tasks
 .PHONY: fmt
@@ -17,12 +12,12 @@ fmt:
 
 .PHONY: vet
 vet:
-	$(GO) vet $(PACKAGES)
+	go vet $(PACKAGES)
 
 .PHONY: test
 test:
-	$(GO) test -race $(PACKAGES)
+	go test -race $(PACKAGES)
 
 .PHONY: test.nocache
 test.nocache:
-	$(GO) test -count=1 -race $(PACKAGES)
+	go test -count=1 -race $(PACKAGES)

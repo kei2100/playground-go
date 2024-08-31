@@ -2,7 +2,7 @@ module github.com/kei2100/playground-go
 
 go 1.23
 
-toolchain go1.23rc2
+toolchain go1.23.0
 
 require (
 	github.com/pkg/profile v1.7.0
