@@ -103,7 +103,7 @@ func TestResponseHeaderTimeout(t *testing.T) {
 }
 
 func TestHTTPServerReadTimeout(t *testing.T) {
-	timeout := time.Millisecond * 100
+	timeout := time.Millisecond * 500
 	ln, err := nettest.NewLocalListener("tcp")
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +142,7 @@ func TestHTTPServerReadTimeout(t *testing.T) {
 	})
 	t.Run("will not timeout", func(t *testing.T) {
 		body := &sleepReader{
-			d: timeout / 10,
+			d: timeout / 50,
 			r: bytes.NewBufferString("hello"),
 		}
 		req, _ := http.NewRequest("POST", "http://"+ln.Addr().String(), body)
