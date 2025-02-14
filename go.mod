@@ -7,7 +7,7 @@ toolchain go1.23.0
 require (
 	github.com/pkg/profile v1.7.0
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.33.0
 	golang.org/x/exp v0.0.0-20220323204016-c86f0da35e87
 	golang.org/x/net v0.34.0
 	golang.org/x/term v0.29.0
