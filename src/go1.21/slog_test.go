@@ -12,6 +12,12 @@ func TestSlog_Simple(t *testing.T) {
 	// 2023/07/08 15:39:13 INFO message foo=bar
 }
 
+func TestSlog_nil(t *testing.T) {
+	slog.Info("message", slog.Any("foo", nil))
+	// 2026/01/29 11:31:35 INFO message foo=<nil>
+	// No output, no panic
+}
+
 func TestSlog_JSONMessage(t *testing.T) {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
