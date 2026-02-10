@@ -2,6 +2,8 @@ module github.com/kei2100/playground-go
 
 go 1.25.0
 
+toolchain go1.26rc3
+
 require (
 	github.com/pkg/profile v1.7.0
 	github.com/stretchr/testify v1.11.1
