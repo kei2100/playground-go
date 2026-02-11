@@ -1,10 +1,11 @@
 package go1_25
 
 import (
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"sync/atomic"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWaitGroup(t *testing.T) {
